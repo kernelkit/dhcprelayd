@@ -44,7 +44,7 @@ Configuration file
 ------------------
 
 Replace the JSON configuration with something easier to write by hand
-and to generate, and drop the jansson dependency.  Reload on SIGHUP.
+and to generate, and drop the jansson dependency.
 
 nftables
 --------
@@ -52,12 +52,33 @@ nftables
 Rules are applied by running `nft` with `system()`.  Use libnftables, or
 document the rules so the system integrator can install them.
 
+Bugs
+----
+
+Found by the tests in `tests/`:
+
+- Requests on a routed (not bridged) interface are relayed twice, once
+  from the raw socket on the interface and once from the UDP socket on
+  port 67, so the server gets every message twice.  `basic.sh` is
+  marked XFAIL until this is fixed.
+- Requests read from the raw socket are relayed with 42 bytes of
+  trailing garbage: the length includes the Ethernet, IP and UDP
+  headers.
+- Clang warns about a signed/unsigned comparison in `read_group()`.
+
+Operational data
+----------------
+
+Count, per interface and port: requests and replies relayed, requests
+dropped by the option 82 policy, requests that already carry option 82,
+and send errors.  Export them for the system, e.g., over a UNIX socket
+or to a file on SIGUSR1.
+
 Tests
 -----
 
-- `make distcheck` fails, `tests/check.sh` is not in `EXTRA_DIST`.
-- Replace the Travis CI and Python 2 integration tests with shell-based
-  tests in network namespaces, like smcroute and mrouted: veth pairs,
-  a bridge, dnsmasq as server and udhcpc as client, and checks of the
-  option 82 contents with tshark or tcpdump.
-- GitHub Actions workflow.
+- Requests that already carry option 82, one test per policy.  Needs a
+  client that can send option 82, udhcpc cannot.
+- Renewals through the relay with `force-server-id`.
+- Several servers, global and per group.
+- Memory leaks with valgrind, including SIGHUP reload.
