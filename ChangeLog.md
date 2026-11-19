@@ -3,8 +3,15 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
-- Versions >= v2.0, Westermo Teleindustri AB
+- Versions >= v2.2, KernelKit, as dhcprelayd
+- Versions >= v2.0, Westermo Teleindustri AB, as dhcp-helper
 - Versions <= v1.2, Simon Kelley <simon@thekelleys.org.uk>
+
+[v2.2][UNRELEASED]
+---------------------
+### Changes
+- Fork of the archived Westermo dhcp-helper, renamed to dhcprelayd
+- Default configuration file is now `/etc/dhcprelayd.json`
 
 [v2.1][] - 2018-06-11
 ---------------------
@@ -21,4 +28,5 @@ v2.0 - 2018-05-31
 - Add support for configuration via configuration file
 - Add DHCP Option 82 support
 
+[UNRELEASED]: https://github.com/kernelkit/dhcprelayd/compare/v2.1...HEAD
 [v2.1]: https://github.com/westermo/dhcp-helper/compare/v2.0...v2.1

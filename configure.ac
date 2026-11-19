@@ -1,8 +1,8 @@
-AC_INIT([dhcp-helper], [2.2-pre], [], [dhcp-helper])
+AC_INIT([dhcprelayd], [2.2-pre], [https://github.com/kernelkit/dhcprelayd/issues], [dhcprelayd], [https://github.com/kernelkit/dhcprelayd])
 AC_PREREQ([2.59])
 AC_CONFIG_HEADERS([src/config.h])
 
-AC_CONFIG_SRCDIR([src/dhcp-helper.c])
+AC_CONFIG_SRCDIR([src/dhcprelayd.c])
 AC_CONFIG_FILES([Makefile src/Makefile tests/Makefile])
 
 AC_PROG_CPP

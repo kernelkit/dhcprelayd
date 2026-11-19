@@ -45,6 +45,6 @@ script:
   - make V=1 all
   - make V=1 install-strip DESTDIR=~/tmp
   - tree -h ~/tmp
-  - ldd ~/tmp/bin/dhcp-helper
-  - size ~/tmp/bin/dhcp-helper
-  - ~/tmp/bin/dhcp-helper -h
+  - ldd ~/tmp/bin/dhcprelayd
+  - size ~/tmp/bin/dhcprelayd
+  - ~/tmp/bin/dhcprelayd -h

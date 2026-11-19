@@ -4,7 +4,7 @@ import subprocess
 @pytest.fixture()
 def setup():
     print "[!] Start DHCP Relay Agent"
-    args = ["../../dhcp-helper", "-d", "-f", "conf/basic.json"]
+    args = ["../../dhcprelayd", "-d", "-f", "conf/basic.json"]
     proc = subprocess.Popen(args=args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     yield setup

@@ -1,20 +1,23 @@
-.TH DHCP-HELPER 8
+.TH DHCPRELAYD 8
 .SH NAME
-dhcp-helper \- A DHCP/BOOTP relay agent.
+dhcprelayd \- DHCP/BOOTP relay agent with Option 82 support
 .SH SYNOPSIS
-.B dhcp-helper
+.B dhcprelayd
 .I [OPTION]...
 .SH "DESCRIPTION"
-.BR dhcp-helper
+.BR dhcprelayd
 is a DHCP and BOOTP relay agent. It listens for DHCP and BOOTP broadcasts on directly connected
 subnets and relays them to DHCP or BOOTP servers elsewhere. It also relays replies from the remote
 servers back to partially configured hosts. Once hosts are fully configured they can communicate
 directly with their servers and no longer need the services of a relay.
 
 .SH OPTIONS
-dhcp-helper requires a configuration file to operate correctly. The
+dhcprelayd requires a configuration file to operate correctly.  The
+default is
+.IR /etc/dhcprelayd.json ,
+use the
 .B \-f
-option is used to specify a configuration file.
+option to specify another file.
 .TP
 .B \-f <file>
 Specify the configuration file to be used.
@@ -30,8 +33,11 @@ Show usage.
 .SH NOTES
 When running with a bridge, nftables is required.
 .SH AUTHOR
-Written by Jonas Johansson, Mattias Walström and Thomas Eliassson
+Maintained by the KernelKit project, https://github.com/kernelkit/dhcprelayd
 .br
-Original written by: Simon Kelley
+Option 82 and bridge support by Jonas Johansson, Mattias Walström and
+Thomas Eliassson at Westermo.
+.br
+Original dhcp-helper by Simon Kelley.
 
 

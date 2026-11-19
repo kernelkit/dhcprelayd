@@ -1,13 +1,13 @@
-dhcp-helper - DHCP relay agent w/ Option 82 support
-===================================================
-[![License Badge][]][License] [![Travis Status][]][Travis]
+dhcprelayd - DHCP relay agent w/ Option 82 support
+==================================================
+[![License Badge][]][License]
 
 A DHCP relay agent is commonly used in routed networks with centralized
 DHCP services.  The relay agent is a service typically configured on a
 router where it converts all DHCP broadcast messages from clients into
 unicast messages which it forwards to the central DHCP server(s).
 
-dhcp-helper listens for DHCP and BOOTP broadcasts on all its configured
+dhcprelayd listens for DHCP and BOOTP broadcasts on all its configured
 interfaces and relays them to DHCP or BOOTP servers elsewhere.  It also
 relays replies from the remote servers back to the hosts.  Once hosts
 are fully configured they can communicate directly with their servers
@@ -21,14 +21,14 @@ request is forwarded from.  In Option 82 terms these are called the
 circuit id and remote id, respectively.  For more information, see IETF
 [RFC 3046](https://tools.ietf.org/html/rfc3046).
 
-dhcp-helper is optimized to run on a VLAN aware bridge, but work as well
+dhcprelayd is optimized to run on a VLAN aware bridge, but work as well
 for a much simpler use case (see simple.json). If running with a bridge
 nftables is required (kernel support and userspace binary). This to stop
 DHCP packets that's already processed by the relay agent to be forwarded
 by the bridge.
 
-dhcp-helper requires a configuration file to operate correctly (default
-read from `/etc/dhcphelper.json` or specified via the `-f`
+dhcprelayd requires a configuration file to operate correctly (default
+read from `/etc/dhcprelayd.json` or specified via the `-f`
 option). The simplest configuration look like this:
 
 ```
@@ -57,7 +57,7 @@ Requirements on an Ubuntu 16.04 system:
 ```
 apt-get install libnl-3-dev libnl-route-3-dev libnl-genl-3-dev libjansson-dev libev-dev
 ```
-Build dhcp-helper:
+Build dhcprelayd:
 ```
 ./configure && make && make install
 ```
@@ -120,10 +120,11 @@ as a string:
 Origin & References
 -------------------
 
-dhcp-helper was originally written by Simon Kelley <simon@thekelleys.org.uk>
+dhcprelayd is a fork of [dhcp-helper][] v2.1 by Westermo, which added
+Option 82 and bridge support to the original dhcp-helper by Simon
+Kelley <simon@thekelleys.org.uk>.  The Westermo project is archived.
 
 
 [License]:         https://en.wikipedia.org/wiki/GPL_license
 [License Badge]:   https://img.shields.io/badge/License-GPL%20v2-blue.svg
-[Travis]:          https://travis-ci.org/westermo/dhcp-helper
-[Travis Status]:   https://travis-ci.org/westermo/dhcp-helper.svg?branch=master
+[dhcp-helper]:     https://github.com/westermo/dhcp-helper

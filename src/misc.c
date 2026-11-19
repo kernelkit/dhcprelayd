@@ -1,4 +1,4 @@
-/* dhcp-helper
+/* dhcprelayd
 
    Copyright (c) 2004,2008 Simon Kelley
    Copyright (c) 2018 Westermo Teleindustri AB
@@ -70,7 +70,7 @@ int setup_nftables(cfg_t *cfg)
 {
 	cfg_group_t *group;
 	cfg_iface_t *iface;
-	char file[128] = "/tmp/dhcp-helper.XXXXXX";
+	char file[128] = "/tmp/dhcprelayd.XXXXXX";
 	char cmd[256], ifname[IFNAMSIZ];
 	FILE *fp;
 	struct nl_sock *sk;

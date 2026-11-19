@@ -1,4 +1,4 @@
-/* dhcp-helper
+/* dhcprelayd
 
    Copyright (c) 2004,2008 Simon Kelley
    Copyright (c) 2018 Westermo Teleindustri AB
@@ -48,7 +48,7 @@ static ev_signal sigterm_watcher;
 static ev_io io_upstreams;
 static ev_io io_upstreams_separate_listen;
 
-static char config_file[128] = "/etc/dhcphelper.json";
+static char config_file[128] = "/etc/dhcprelayd.json";
 
 static int get_ifindex(struct msghdr *msg)
 {
@@ -287,7 +287,7 @@ static int setup_socket_udp_separate_listen(struct ev_loop *loop, cfg_t *cfg)
 	saddr.sin_port = htons(udp_listen_port);
 	saddr.sin_addr.s_addr = INADDR_ANY;
 	if (bind(sd_separate_in, (struct sockaddr *)&saddr, sizeof(struct sockaddr_in))) {
-		perror("dhcp-helper: cannot bind DHCP high level socket");
+		perror(PACKAGE_NAME ": cannot bind DHCP high level socket");
 		return -1;
 	}
 
@@ -328,7 +328,7 @@ static int setup_socket_udp(struct ev_loop *loop)
 	saddr.sin_port = htons(DHCP_SERVER_PORT);
 	saddr.sin_addr.s_addr = INADDR_ANY;
 	if (bind(sd_out, (struct sockaddr *)&saddr, sizeof(struct sockaddr_in))) {
-		perror("dhcp-helper: cannot bind DHCP high level socket");
+		perror(PACKAGE_NAME ": cannot bind DHCP high level socket");
 		return -1;
 	}
 
@@ -485,7 +485,7 @@ int main(int argc, char **argv)
 	}
 
 	setlogmask(LOG_UPTO(LOG_INFO));
-	syslog2(LOG_INFO, "Starting dhcp-helper");
+	syslog2(LOG_INFO, "Starting " PACKAGE_NAME);
 
 	loop = ev_default_loop(0);
 

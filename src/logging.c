@@ -1,4 +1,4 @@
-/* dhcp-helper
+/* dhcprelayd
 
    Copyright (c) 2018 Westermo Teleindustri AB
 
