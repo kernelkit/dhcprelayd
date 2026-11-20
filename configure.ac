@@ -36,12 +36,9 @@ AC_CHECK_HEADERS([linux/capability.h])
 AC_CHECK_HEADERS([sys/prctl.h])
 AC_CHECK_HEADERS([net/if_arp.h])
 
-AC_CHECK_HEADERS([linux/netlink.h])
-
 # Check for pkg-config first, warn if it's not installed
 PKG_PROG_PKG_CONFIG
 
-PKG_CHECK_MODULES([LIBNL], [libnl-3.0 libnl-genl-3.0 libnl-route-3.0])
 PKG_CHECK_MODULES([JANSSON], [jansson])
 
 AC_CHECK_HEADER([ev.h],

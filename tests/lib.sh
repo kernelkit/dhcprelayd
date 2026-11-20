@@ -253,6 +253,9 @@ check_dep ip
 check_dep bridge
 check_dep nsenter
 
+# sysfs for this network namespace, dhcprelayd looks up bridge ports there
+mount -t sysfs sysfs /sys
+
 rm -rf "$DIR"
 mkdir -p "$DIR"
 touch "$DIR/PIDs" "$DIR/mounts"

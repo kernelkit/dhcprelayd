@@ -55,7 +55,7 @@ Building
 
 Requirements on an Ubuntu 16.04 system:
 ```
-apt-get install libnl-3-dev libnl-route-3-dev libnl-genl-3-dev libjansson-dev libev-dev
+apt-get install libjansson-dev libev-dev
 ```
 Build dhcprelayd:
 ```

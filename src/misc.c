@@ -16,19 +16,19 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include <errno.h>
 #include <unistd.h>
 #include <net/if.h>
 #include <arpa/inet.h>
 #include <net/ethernet.h>
 #include <sys/ioctl.h>
 #include <net/if_arp.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include <netlink/netlink.h>
-#include <netlink/route/link.h>
-#include <netlink/route/link/bridge.h>
-#include <netlink/route/neighbour.h>
+#include <linux/neighbour.h>
+#include <linux/netlink.h>
+#include <linux/rtnetlink.h>
 
 #include "conf.h"
 #include "logging.h"
@@ -45,25 +45,48 @@ static char *mac_ntoa(unsigned char *ptr)
 	return (address);
 }
 
-static int iface_is_bridged(struct nl_sock *sk, int ifindex)
+static int iface_is_bridged(int ifindex)
 {
-	struct rtnl_link *link, *master;
+	char ifname[IF_NAMESIZE], path[sizeof("/sys/class/net//brport") + IF_NAMESIZE];
 
-	rtnl_link_get_kernel(sk, ifindex, NULL, &link);
-	/* Only add nftables rules if interface is bridged. */
-	if (link) {
-		if (rtnl_link_get_master(link)) {
-			rtnl_link_get_kernel(sk, rtnl_link_get_master(link), NULL, &master);
-			if (rtnl_link_is_bridge(master)) {
-				rtnl_link_put(master);
-				rtnl_link_put(link);
-				return 1;
-			}
-		}
-		rtnl_link_put(link);
+	if (!if_indextoname(ifindex, ifname))
+		return 0;
+
+	snprintf(path, sizeof(path), "/sys/class/net/%s", ifname);
+	if (access(path, F_OK)) {
+		syslog2(LOG_WARNING, "%s not in /sys, sysfs from another network namespace?", ifname);
+		return 0;
 	}
 
-	return 0;
+	snprintf(path, sizeof(path), "/sys/class/net/%s/brport", ifname);
+	return access(path, F_OK) == 0;
+}
+
+/* Send a netlink request and wait for its ACK, returns errno or 0 */
+static int nl_req(void *req, size_t len)
+{
+	struct {
+		struct nlmsghdr nh;
+		struct nlmsgerr err;
+	} ack;
+	ssize_t rc;
+	int sd, err;
+
+	sd = socket(AF_NETLINK, SOCK_RAW | SOCK_CLOEXEC, NETLINK_ROUTE);
+	if (sd < 0)
+		return errno;
+
+	if (send(sd, req, len, 0) < 0)
+		err = errno;
+	else if ((rc = recv(sd, &ack, sizeof(ack), 0)) < 0)
+		err = errno;
+	else if (rc < (ssize_t)sizeof(ack) || ack.nh.nlmsg_type != NLMSG_ERROR)
+		err = EPROTO;
+	else
+		err = -ack.err.error;
+
+	close(sd);
+	return err;
 }
 
 int setup_nftables(cfg_t *cfg)
@@ -73,7 +96,6 @@ int setup_nftables(cfg_t *cfg)
 	char file[128] = "/tmp/dhcprelayd.XXXXXX";
 	char cmd[256], ifname[IFNAMSIZ];
 	FILE *fp;
-	struct nl_sock *sk;
 	int err = 0, fd, anybridged = 0;
   mode_t cur_umask;
 
@@ -93,21 +115,11 @@ int setup_nftables(cfg_t *cfg)
 		goto err_unlink;
 	}
 
-	sk = nl_socket_alloc();
-	if (!sk) {
-		err = -NLE_NOMEM;
-		goto err_close_fp;
-	}
-
-	err = nl_connect(sk, NETLINK_ROUTE);
-	if (err)
-		goto err_free_sk;
-
 	fprintf(fp, "table bridge filter {\n");
 	fprintf(fp, "chain " NFT_IN_CHAIN " {\n type filter hook input priority -200\n");
 	TAILQ_FOREACH(group, &cfg->group_list, link) {
 		TAILQ_FOREACH(iface, &group->iface_list, link) {
-			if (iface_is_bridged(sk, iface->ifindex)) {
+			if (iface_is_bridged(iface->ifindex)) {
 				anybridged = 1;
 				if_indextoname(iface->ifindex, ifname);
 				syslog2(LOG_DEBUG, "Interface %s is bridged, setting up nftables", ifname);
@@ -121,7 +133,7 @@ int setup_nftables(cfg_t *cfg)
 	TAILQ_FOREACH(group, &cfg->group_list, link) {
 		TAILQ_FOREACH(iface, &group->iface_list, link) {
 			/* Only add nftables rules if interface is bridged. */
-			if (iface_is_bridged(sk, iface->ifindex)) {
+			if (iface_is_bridged(iface->ifindex)) {
 				anybridged = 1;
 				if_indextoname(iface->ifindex, ifname);
 				syslog2(LOG_DEBUG, "Interface %s is bridged, setting up nftables", ifname);
@@ -132,9 +144,6 @@ int setup_nftables(cfg_t *cfg)
 	fprintf(fp, "}\n}");
 
 	fprintf(fp, "\n");
- err_free_sk:
-	nl_socket_free(sk);
- err_close_fp:
 	fclose(fp);
 	if (anybridged) {
 		snprintf(cmd, sizeof(cmd), "nft -f %s", file);
@@ -151,20 +160,11 @@ int cleanup_nftables(cfg_t *cfg)
 {
 	cfg_group_t *group;
 	int anybridged = 0;
-	struct nl_sock *sk;
-
-	sk = nl_socket_alloc();
-	if (!sk) {
-		return 1;
-	}
-
-	if (nl_connect(sk, NETLINK_ROUTE))
-		goto err_free_sk;
 
 	TAILQ_FOREACH(group, &cfg->group_list, link) {
 		cfg_iface_t *iface;
 		TAILQ_FOREACH(iface, &group->iface_list, link) {
-			if (iface_is_bridged(sk, iface->ifindex))
+			if (iface_is_bridged(iface->ifindex))
 				anybridged = 1;
 		}
 	}
@@ -176,8 +176,6 @@ int cleanup_nftables(cfg_t *cfg)
 		if (system("nft  delete chain bridge filter " NFT_FWD_CHAIN))
 			syslog2(LOG_ERR, "Failed deleting nftables forward rules");
 	}
-err_free_sk:
-	nl_socket_free(sk);
 	return 0;
 }
 
@@ -190,65 +188,39 @@ err_free_sk:
  */
 int add_fdb_entry(int ifindex, unsigned char *mac)
 {
-	int err = 0;
-	struct nl_addr *addr;
-	struct rtnl_neigh *neigh;
-	struct nl_sock *sk;
-	sk = nl_socket_alloc();
+	struct {
+		struct nlmsghdr nh;
+		struct ndmsg    ndm;
+		struct rtattr   rta;
+		unsigned char   lladdr[ETH_ALEN];
+	} req;
+	int err;
 
-	if (!sk)
-		return 1;
-
-	err = nl_connect(sk, NETLINK_ROUTE);
-	if (err) {
-		syslog(LOG_ERR, "Failed setting connecting to NETLINK_ROUTE: %s", nl_geterror(err));
-		goto free_sk;
-	}
-
-	if (!iface_is_bridged(sk, ifindex)) {
+	if (!iface_is_bridged(ifindex)) {
 		syslog2(LOG_DEBUG, "Interface %d is not bridged, skipping FDB entry", ifindex);
-		nl_socket_free(sk);
-		return 0; /* No fail, just exit. */
+		return 0;
 	}
 
-	addr = nl_addr_alloc(ETH_ALEN);
-	if (!addr) {
-		syslog2(LOG_ERR, "Could not allocate netlink address");
-		err = -NLE_NOMEM;
-		goto free_sk;
-	}
+	memset(&req, 0, sizeof(req));
+	req.nh.nlmsg_len    = sizeof(req);
+	req.nh.nlmsg_type   = RTM_NEWNEIGH;
+	req.nh.nlmsg_flags  = NLM_F_REQUEST | NLM_F_ACK | NLM_F_CREATE | NLM_F_REPLACE;
+	req.ndm.ndm_family  = PF_BRIDGE;
+	req.ndm.ndm_ifindex = ifindex;
+	req.ndm.ndm_state   = NUD_REACHABLE;
+	req.ndm.ndm_flags   = NTF_MASTER;
+	req.rta.rta_type    = NDA_LLADDR;
+	req.rta.rta_len     = RTA_LENGTH(ETH_ALEN);
+	memcpy(req.lladdr, mac, ETH_ALEN);
 
-	syslog2(LOG_DEBUG, "Interface %d is bridged, adding FDB entry", ifindex);
-	nl_addr_set_family(addr, AF_LLC);
-	err = nl_addr_set_binary_addr(addr, mac, ETH_ALEN);
+	syslog2(LOG_DEBUG, "Adding MAC %s ifindex %d in bridge FDB", mac_ntoa(mac), ifindex);
+	err = nl_req(&req, sizeof(req));
 	if (err) {
-		syslog(LOG_ERR, "Failed creating netlink binary address: %s", nl_geterror(err));
-		goto free_addr;
-		return err;
+		syslog2(LOG_ERR, "Failed adding FDB entry: %s", strerror(err));
+		return 1;
 	}
 
-	neigh = rtnl_neigh_alloc();
-	if (!neigh) {
-		err = -NLE_NOMEM;
-		goto free_addr;
-	}
-	rtnl_neigh_set_family(neigh, PF_BRIDGE);
-	rtnl_neigh_set_lladdr(neigh, addr);
-	nl_addr_set_prefixlen(addr, 48);
-	rtnl_neigh_set_flags(neigh, NTF_MASTER);
-	rtnl_neigh_set_state(neigh, NUD_REACHABLE);
-	rtnl_neigh_set_ifindex(neigh, ifindex);
-
-	syslog(LOG_DEBUG, "Adding MAC %02x:%02x:%02x:%02x:%02x:%02x ifindex %d in bridge FDB", mac[0],mac[1],mac[2],mac[3],mac[4],mac[5], ifindex);
-	err = rtnl_neigh_add(sk, neigh, NLM_F_CREATE); //NLM_F_CREATE);
-
-	rtnl_neigh_put(neigh);
-free_addr:
-	nl_addr_put(addr);
-free_sk:
-	nl_socket_free(sk);
-
-	return err;
+	return 0;
 }
 
 int add_arp_entry(int ifindex, unsigned char *mac, struct sockaddr_in saddr)
