@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 320" width="780" height="320" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14">
+  <title>A DHCP request before and after the relay agent</title>
+  <style>
+    .fg     { fill: #1f2328; }
+    .muted  { fill: #59636e; }
+    .mono   { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; }
+    .cell   { fill: #f6f8fa; stroke: #d0d7de; stroke-width: 1; }
+    .hl     { fill: #fff1e5; stroke: #bc4c00; stroke-width: 1.5; }
+    .arrow  { stroke: #59636e; stroke-width: 2; fill: none; }
+    .orange { fill: #bc4c00; }
+    .head   { fill: #59636e; }
+    @media (prefers-color-scheme: dark) {
+      .fg     { fill: #e6edf3; }
+      .muted  { fill: #9198a1; }
+      .cell   { fill: #151b23; stroke: #3d444d; }
+      .hl     { fill: #2d1c10; stroke: #f0883e; }
+      .arrow  { stroke: #9198a1; }
+      .orange { fill: #f0883e; }
+      .head   { fill: #9198a1; }
+    }
+  </style>
+  <defs>
+    <marker id="am" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" class="head"/>
+    </marker>
+  </defs>
+
+  <!-- From the client -->
+  <text class="fg" x="20" y="28" font-weight="600">From the client</text>
+  <g class="mono">
+    <rect class="cell" x="20"  y="40"  width="90"  height="28"/><text class="muted" x="30"  y="59">op</text>
+    <rect class="cell" x="110" y="40"  width="190" height="28"/><text class="fg"    x="120" y="59">BOOTREQUEST</text>
+    <rect class="cell" x="20"  y="68"  width="90"  height="28"/><text class="muted" x="30"  y="87">giaddr</text>
+    <rect class="cell" x="110" y="68"  width="190" height="28"/><text class="fg"    x="120" y="87">0.0.0.0</text>
+    <rect class="cell" x="20"  y="96"  width="90"  height="28"/><text class="muted" x="30"  y="115">chaddr</text>
+    <rect class="cell" x="110" y="96"  width="190" height="28"/><text class="fg"    x="120" y="115">02:00:00:00:00:01</text>
+    <rect class="cell" x="20"  y="124" width="90"  height="84"/><text class="muted" x="30"  y="143">options</text>
+    <rect class="cell" x="110" y="124" width="190" height="28"/><text class="fg"    x="120" y="143">53 DHCPDISCOVER</text>
+    <rect class="cell" x="110" y="152" width="190" height="28"/><text class="fg"    x="120" y="171">55 parameter list</text>
+    <rect class="cell" x="110" y="180" width="190" height="28"/><text class="fg"    x="120" y="199">255 end</text>
+  </g>
+
+  <!-- Relay agent -->
+  <line class="arrow" x1="320" y1="124" x2="440" y2="124" marker-end="url(#am)"/>
+  <text class="fg" x="380" y="112" text-anchor="middle" font-weight="600">relay agent</text>
+  <text class="muted" x="380" y="146" text-anchor="middle" font-size="12">port e1</text>
+
+  <!-- To the server -->
+  <text class="fg" x="460" y="28" font-weight="600">To the server</text>
+  <g class="mono">
+    <rect class="cell" x="460" y="40"  width="90"  height="28"/><text class="muted" x="470" y="59">op</text>
+    <rect class="cell" x="550" y="40"  width="210" height="28"/><text class="fg"    x="560" y="59">BOOTREQUEST</text>
+    <rect class="cell" x="460" y="68"  width="90"  height="28"/><text class="muted" x="470" y="87">giaddr</text>
+    <rect class="hl"   x="550" y="68"  width="210" height="28"/><text class="orange" x="560" y="87">10.0.0.1</text>
+    <rect class="cell" x="460" y="96"  width="90"  height="28"/><text class="muted" x="470" y="115">chaddr</text>
+    <rect class="cell" x="550" y="96"  width="210" height="28"/><text class="fg"    x="560" y="115">02:00:00:00:00:01</text>
+    <rect class="cell" x="460" y="124" width="90"  height="168"/><text class="muted" x="470" y="143">options</text>
+    <rect class="cell" x="550" y="124" width="210" height="28"/><text class="fg"    x="560" y="143">53 DHCPDISCOVER</text>
+    <rect class="cell" x="550" y="152" width="210" height="28"/><text class="fg"    x="560" y="171">55 parameter list</text>
+    <rect class="hl"   x="550" y="180" width="210" height="84"/>
+    <text class="orange" x="560" y="199">82 relay agent info</text>
+    <text class="orange" x="574" y="227">1 circuit-id "e1"</text>
+    <text class="orange" x="574" y="255">2 remote-id "switch1"</text>
+    <rect class="cell" x="550" y="264" width="210" height="28"/><text class="fg"    x="560" y="283">255 end</text>
+  </g>
+</svg>

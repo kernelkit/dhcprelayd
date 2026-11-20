@@ -2,30 +2,71 @@ dhcprelayd - DHCP relay agent w/ Option 82 support
 ==================================================
 [![License Badge][]][License]
 
-A DHCP relay agent is commonly used in routed networks with centralized
-DHCP services.  The relay agent is a service typically configured on a
-router where it converts all DHCP broadcast messages from clients into
-unicast messages which it forwards to the central DHCP server(s).
+A DHCP relay agent lets clients on one network get their address from a
+DHCP server on another.  Clients find a DHCP server by broadcasting, and
+broadcasts stay on the local network.  The relay agent, usually a router
+or a switch with an IP address on the client network, picks up the
+broadcasts and forwards them as unicast to one or more central DHCP
+servers.  It relays the replies back to the clients.
 
-dhcprelayd listens for DHCP and BOOTP broadcasts on all its configured
-interfaces and relays them to DHCP or BOOTP servers elsewhere.  It also
-relays replies from the remote servers back to the hosts.  Once hosts
-are fully configured they can communicate directly with their servers
-and no longer need the services of a relay.
+dhcprelayd is a DHCP relay agent with support for option 82, the relay
+agent information option from [RFC 3046][].  It can run on a routed
+interface, but it is mainly made for a switch: a VLAN aware bridge where
+each bridge port connects to one client.
 
-In some setups it is preferred to always enforce communication via the
-DHCP relay.  This usually coincides with requirements for DHCP Option
-82, i.e., where the relay tucks on extra information for the server
-regarding which port a host is connected to and from which relay the
-request is forwarded from.  In Option 82 terms these are called the
-circuit id and remote id, respectively.  For more information, see IETF
-[RFC 3046](https://tools.ietf.org/html/rfc3046).
 
-dhcprelayd is optimized to run on a VLAN aware bridge, but work as well
-for a much simpler use case (see simple.json). If running with a bridge
-nftables is required (kernel support and userspace binary). This to stop
-DHCP packets that's already processed by the relay agent to be forwarded
-by the bridge.
+Use case
+--------
+
+![IP address per port](doc/use-case.svg)
+
+The relay agent adds option 82 to each request it relays.  The option
+tells the server which port the request came in on, the *circuit-id*,
+and which relay agent sent it, the *remote-id*.  The server can then
+hand out an address per port instead of per MAC address.
+
+This is common in industrial networks: the camera on port e1 always
+gets 10.0.0.41.  When the camera is replaced, the new unit gets the
+same address without anyone changing the server configuration.
+
+
+How it works
+------------
+
+![How a request and its reply are relayed](doc/packet-flow.svg)
+
+1. The client broadcasts a DHCPDISCOVER on port e1
+2. dhcprelayd reads the request from port e1.  The bridge does not
+   forward it: nftables rules drop DHCP requests from the bridge ports,
+   so it is not flooded to port e2
+3. dhcprelayd sets the gateway address, `giaddr`, to its address on the
+   client network and adds option 82
+4. The request is sent as unicast to the DHCP server
+5. The server sends its reply to `giaddr`, the relay agent
+6. dhcprelayd removes option 82, adds an FDB entry for the client on
+   port e1 and an ARP entry for the offered address, and sends the
+   reply to the client
+
+The FDB entry is for switch cores that do not learn from frames trapped
+to the CPU.  Without it the reply would be flooded to every port.
+
+
+Option 82
+---------
+
+![A request before and after the relay agent](doc/option82.svg)
+
+The circuit-id defaults to the name of the port the request came in on,
+and can be set per port.  The remote-id is the hostname, the `giaddr`,
+or a configured string.  Both can also be given as hex values, see
+[String or hex values](#string-or-hex-values).
+
+
+Getting started
+---------------
+
+On a bridge, dhcprelayd needs nftables, both kernel support and the
+`nft` tool.
 
 dhcprelayd requires a configuration file to operate correctly (default
 read from `/etc/dhcprelayd.json` or specified via the `-f`
@@ -125,6 +166,7 @@ Option 82 and bridge support to the original dhcp-helper by Simon
 Kelley <simon@thekelleys.org.uk>.  The Westermo project is archived.
 
 
+[RFC 3046]:        https://www.rfc-editor.org/rfc/rfc3046
 [License]:         https://en.wikipedia.org/wiki/GPL_license
 [License Badge]:   https://img.shields.io/badge/License-GPL%20v2-blue.svg
 [dhcp-helper]:     https://github.com/westermo/dhcp-helper
