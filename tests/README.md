@@ -94,6 +94,13 @@ and each request reaches the server exactly once.
 Topology: routed.  Expected to fail until requests on routed interfaces
 are no longer relayed twice, see TODO.md.
 
+### length
+
+A request is relayed with the same UDP length as the client sent it,
+when no option 82 is added.
+
+Topology: routed
+
 ### option82
 
 With option 82 enabled on a routed interface, the client gets the

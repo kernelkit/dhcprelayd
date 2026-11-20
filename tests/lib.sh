@@ -200,6 +200,12 @@ capture()
     echo $! >> "$DIR/PIDs"
 }
 
+# Print the unique UDP lengths captured on interface $1
+cap_lengths()
+{
+    awk '{print $NF}' "$DIR/$1.cap" | sort -u | xargs
+}
+
 show_logs()
 {
     print "Relay agent log"

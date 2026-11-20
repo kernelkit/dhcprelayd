@@ -112,7 +112,7 @@ static struct dhcp_packet_with_opts *packet_rcv_raw(int sd, unsigned char *buf, 
 	struct ethhdr *eth_hdr = (struct ethhdr *)buf;
 	struct iphdr *ip_hdr = (struct iphdr *)((char *)eth_hdr + (sizeof(struct ethhdr)));
 	struct udphdr *udp;
-	int dport;
+	int dport, hlen, ulen;
 
 	socklen_t salen = sizeof sl;
 
@@ -132,7 +132,13 @@ static struct dhcp_packet_with_opts *packet_rcv_raw(int sd, unsigned char *buf, 
 		return NULL;
 	}
 
-	udp = (struct udphdr *)((char *)ip_hdr + (4 * ip_hdr->ihl));
+	hlen = sizeof(struct ethhdr) + 4 * ip_hdr->ihl;
+	if (*len < hlen + (int)sizeof(struct udphdr)) {
+		syslog2(LOG_NOTICE, "Received truncated raw packet (%d bytes).", *len);
+		return NULL;
+	}
+
+	udp = (struct udphdr *)(buf + hlen);
 	dport = ntohs(udp->dest);
 
 	if (dport != 67 && dport != 68) {
@@ -140,7 +146,14 @@ static struct dhcp_packet_with_opts *packet_rcv_raw(int sd, unsigned char *buf, 
 		return NULL;
 	}
 
-	return (struct dhcp_packet_with_opts *)((char *)(udp) + sizeof(struct udphdr));
+	ulen = ntohs(udp->len);
+	if (ulen < (int)sizeof(struct udphdr) || hlen + ulen > *len) {
+		syslog2(LOG_NOTICE, "Received raw packet with invalid UDP length (%d).", ulen);
+		return NULL;
+	}
+	*len = ulen - sizeof(struct udphdr);
+
+	return (struct dhcp_packet_with_opts *)(udp + 1);
 }
 
 static void packet_cb_raw(struct ev_loop *loop __attribute__ ((unused)), ev_io *w, int revents __attribute__ ((unused)))

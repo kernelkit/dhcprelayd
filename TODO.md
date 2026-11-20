@@ -61,9 +61,6 @@ Found by the tests in `tests/`:
   from the raw socket on the interface and once from the UDP socket on
   port 67, so the server gets every message twice.  `basic.sh` is
   marked XFAIL until this is fixed.
-- Requests read from the raw socket are relayed with 42 bytes of
-  trailing garbage: the length includes the Ethernet, IP and UDP
-  headers.
 - Clang warns about a signed/unsigned comparison in `read_group()`.
 
 Operational data
