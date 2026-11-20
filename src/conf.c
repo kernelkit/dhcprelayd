@@ -81,7 +81,7 @@ static void option82_parse_manual(json_t *obj, char *buf, int len, int *res)
 	}
 }
 
-static int read_option82(json_t *json, cfg_t *cfg)
+static int read_option82(json_t *json, conf_t *cfg)
 {
 	json_t *obj;
 
@@ -130,7 +130,7 @@ static int read_option82(json_t *json, cfg_t *cfg)
 	return 0;
 }
 
-static int read_ifaces(json_t *json, cfg_group_t *group)
+static int read_ifaces(json_t *json, conf_group_t *group)
 {
 	json_t *arr, *obj;
 	size_t i;
@@ -139,7 +139,7 @@ static int read_ifaces(json_t *json, cfg_group_t *group)
 
 	arr = json_object_get(json, "iface");
 	if (!json_is_array(arr)) {
-		cfg_iface_t *iface;
+		conf_iface_t *iface;
 
 		syslog2(LOG_DEBUG, "No ifaces node, use same as in group");
 		iface = malloc(sizeof(*iface));
@@ -155,7 +155,7 @@ static int read_ifaces(json_t *json, cfg_group_t *group)
 	}
 
 	json_array_foreach(arr, i, obj) {
-		cfg_iface_t *iface;
+		conf_iface_t *iface;
 		json_t *ifname;
 
 		if (!json_is_object(obj))
@@ -184,7 +184,7 @@ static int read_ifaces(json_t *json, cfg_group_t *group)
 	return 0;
 }
 
-static int read_servers(json_t *json, cfg_t *cfg, cfg_group_t *group)
+static int read_servers(json_t *json, conf_t *cfg, conf_group_t *group)
 {
 	json_t *arr, *obj, *address;
 	size_t i;
@@ -199,7 +199,7 @@ static int read_servers(json_t *json, cfg_t *cfg, cfg_group_t *group)
 		return 0;
 
 	json_array_foreach(arr, i, obj) {
-		cfg_server_t *server;
+		conf_server_t *server;
 
 		if (!json_is_object(obj))
 			return 1;
@@ -227,12 +227,12 @@ static int read_servers(json_t *json, cfg_t *cfg, cfg_group_t *group)
 	return 0;
 }
 
-static int read_group(json_t *json, cfg_t *cfg)
+static int read_group(json_t *json, conf_t *cfg)
 {
 	json_t *obj, *arr;
 	size_t i;
 	struct ifaddrs *ifap, *ifa;
-	cfg_group_t *group = NULL;
+	conf_group_t *group = NULL;
 
 	arr = json_object_get(json, "group");
 	if (!json_is_array(arr))
@@ -304,7 +304,7 @@ static int read_group(json_t *json, cfg_t *cfg)
 /**
    Read option 11 (force server ID)
  */
-static int read_force_sid(json_t *json, cfg_t *cfg)
+static int read_force_sid(json_t *json, conf_t *cfg)
 {
 	json_t *obj;
 
@@ -317,7 +317,7 @@ static int read_force_sid(json_t *json, cfg_t *cfg)
 	return 0;
 }
 
-static int read_udp_listen_port(json_t *json, cfg_t *cfg)
+static int read_udp_listen_port(json_t *json, conf_t *cfg)
 {
 	if (read_int(json, &cfg->udp_listen_port, "udp-listen-port", 67))
 		return 1;
@@ -326,9 +326,9 @@ static int read_udp_listen_port(json_t *json, cfg_t *cfg)
 }
 
 /* Check that config is consistent, return 0 if not ok. */
-static int conf_validate(cfg_t *cfg)
+static int conf_validate(conf_t *cfg)
 {
-	cfg_group_t *group;
+	conf_group_t *group;
 
 	TAILQ_FOREACH(group, &cfg->group_list, link) {
 		if (TAILQ_EMPTY(&group->server_list) && TAILQ_EMPTY(&cfg->server_list)) {
@@ -340,7 +340,7 @@ static int conf_validate(cfg_t *cfg)
 	return 1;
 }
 
-int conf_read(cfg_t *cfg, char *file)
+int conf_read(conf_t *cfg, char *file)
 {
 	json_t *json;
 	json_error_t error;
@@ -383,13 +383,13 @@ int conf_read(cfg_t *cfg, char *file)
 	return 1;
 }
 
-void conf_free(cfg_t *cfg)
+void conf_free(conf_t *cfg)
 {
-	cfg_group_t *group, *itemp;
-	cfg_server_t *server, *stemp;
+	conf_group_t *group, *itemp;
+	conf_server_t *server, *stemp;
 
 	TAILQ_FOREACH_SAFE(group, &cfg->group_list, link, itemp) {
-		cfg_iface_t *iface, *ptemp;
+		conf_iface_t *iface, *ptemp;
 
 		TAILQ_FOREACH_SAFE(server, &group->server_list, link, stemp) {
 			TAILQ_REMOVE(&group->server_list, server, link);

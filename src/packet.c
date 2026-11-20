@@ -44,10 +44,10 @@ union {
 
 /* Search for group by iface index. 
  * @Return  NULL if not found. */
-cfg_group_t *find_group(cfg_t *cfg, int ifindex)
+conf_group_t *find_group(conf_t *cfg, int ifindex)
 {
-	cfg_group_t *entry;
-	cfg_iface_t *entry2;
+	conf_group_t *entry;
+	conf_iface_t *entry2;
 
 	TAILQ_FOREACH(entry, &cfg->group_list, link) {
 		TAILQ_FOREACH(entry2, &entry->iface_list, link) {
@@ -62,10 +62,10 @@ cfg_group_t *find_group(cfg_t *cfg, int ifindex)
 
 /* Search for group by giaddr. 
  * @Return  NULL if not found. */
-cfg_group_t *find_group_by_giaddr(cfg_t *cfg, struct in_addr giaddr)
+conf_group_t *find_group_by_giaddr(conf_t *cfg, struct in_addr giaddr)
 {
-	cfg_group_t *entry;
-	cfg_iface_t *entry2;
+	conf_group_t *entry;
+	conf_iface_t *entry2;
 
 	TAILQ_FOREACH(entry, &cfg->group_list, link) {
 		TAILQ_FOREACH(entry2, &entry->iface_list, link) {
@@ -78,9 +78,9 @@ cfg_group_t *find_group_by_giaddr(cfg_t *cfg, struct in_addr giaddr)
 
 /* Is already gatewayed by us? 
  * TODO: Is this needed? Inherited from original dhcp-helper */
-static int is_local_gw(cfg_t *cfg, in_addr_t s_addr)
+static int is_local_gw(conf_t *cfg, in_addr_t s_addr)
 {
-	cfg_group_t *entry;
+	conf_group_t *entry;
 
 	TAILQ_FOREACH(entry, &cfg->group_list, link) {
 		if (s_addr == (in_addr_t)entry->giaddr)
@@ -89,11 +89,11 @@ static int is_local_gw(cfg_t *cfg, in_addr_t s_addr)
 	return 0;
 }
 
-static int handle_request(cfg_t *cfg, struct dhcp_packet *packet, int ifindex, ssize_t sz)
+static int handle_request(conf_t *cfg, struct dhcp_packet *packet, int ifindex, ssize_t sz)
 {
 	struct sockaddr_in saddr;
-	cfg_group_t *group;
-	cfg_server_t *server;
+	conf_group_t *group;
+	conf_server_t *server;
 
 	memset(&saddr, 0, sizeof(saddr));
 
@@ -161,13 +161,13 @@ static int handle_request(cfg_t *cfg, struct dhcp_packet *packet, int ifindex, s
 	return 0;
 }
 
-int handle_reply(cfg_t *cfg, struct dhcp_packet *packet, int ifindex, ssize_t sz)
+int handle_reply(conf_t *cfg, struct dhcp_packet *packet, int ifindex, ssize_t sz)
 {
 	struct msghdr msg;
 	struct iovec iov;
 	struct sockaddr_in saddr;
 	struct in_pktinfo *pkt;
-	cfg_group_t *group;
+	conf_group_t *group;
 	struct cmsghdr *cmptr;
 	int result = 0;
 
@@ -236,7 +236,7 @@ int handle_reply(cfg_t *cfg, struct dhcp_packet *packet, int ifindex, ssize_t sz
 	return 0;
 }
 
-int handle_packet(cfg_t *cfg, struct dhcp_packet *packet, ssize_t sz, int ifindex, int sd_out)
+int handle_packet(conf_t *cfg, struct dhcp_packet *packet, ssize_t sz, int ifindex, int sd_out)
 {
 	send_sd = sd_out;
 	/* rfc1542 says discard if > 16 */

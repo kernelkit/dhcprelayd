@@ -200,8 +200,8 @@ static void encap_opts(struct dhcp_opt *opt, int encap, struct dhcp_packet_with_
 	}
 }
 
-static void add_option82(struct dhcp_packet_with_opts *mess, unsigned char *end, int ifindex, cfg_t *cfg,
-			 cfg_iface_t *iface, struct in_addr addr)
+static void add_option82(struct dhcp_packet_with_opts *mess, unsigned char *end, int ifindex, conf_t *cfg,
+			 conf_iface_t *iface, struct in_addr addr)
 {
 	unsigned char ifname[IF_NAMESIZE];
 	char *giaddr;
@@ -266,9 +266,9 @@ static void add_option82(struct dhcp_packet_with_opts *mess, unsigned char *end,
 }
 
 /* Is request from @iface_index allowed? */
-static cfg_iface_t *find_iface_cfg(cfg_group_t *group, int ifindex)
+static conf_iface_t *find_iface_cfg(conf_group_t *group, int ifindex)
 {
-	cfg_iface_t *entry;
+	conf_iface_t *entry;
 
 	TAILQ_FOREACH(entry, &group->iface_list, link) {
 		int index = entry->ifindex;
@@ -279,11 +279,11 @@ static cfg_iface_t *find_iface_cfg(cfg_group_t *group, int ifindex)
 	return NULL;
 }
 
-size_t add_options(struct dhcp_packet_with_opts *mess, size_t sz, int ifindex, struct in_addr addr, cfg_group_t *group, cfg_t *cfg)
+size_t add_options(struct dhcp_packet_with_opts *mess, size_t sz, int ifindex, struct in_addr addr, conf_group_t *group, conf_t *cfg)
 {
 	unsigned char *tmp, *opt, *end = (unsigned char *)(mess + 1);
 	unsigned char *real_end = (unsigned char *)(mess + 1);
-	cfg_iface_t *iface;
+	conf_iface_t *iface;
 	int nbytes;
 
 	syslog2(LOG_DEBUG, "Adding options");

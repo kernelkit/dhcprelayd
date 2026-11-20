@@ -159,7 +159,7 @@ static struct dhcp_packet_with_opts *packet_rcv_raw(int sd, unsigned char *buf, 
 static void packet_cb_raw(struct ev_loop *loop __attribute__ ((unused)), ev_io *w, int revents __attribute__ ((unused)))
 {
 	static unsigned char buf[2048];	/* MAXIMUM_PACKET_SIZE */
-	cfg_t *cfg = ev_userdata(loop);
+	conf_t *cfg = ev_userdata(loop);
 	struct dhcp_packet_with_opts *packet;
 	int ifindex;
 	int len;
@@ -177,7 +177,7 @@ static void packet_cb_raw(struct ev_loop *loop __attribute__ ((unused)), ev_io *
 static void udp_recv(struct ev_loop *loop, ev_io *w, int replies_only)
 {
 	static unsigned char buf[2048];	/* MAXIMUM_PACKET_SIZE */
-	cfg_t *cfg = ev_userdata(loop);
+	conf_t *cfg = ev_userdata(loop);
 	struct dhcp_packet_with_opts *packet;
 	int ifindex;
 	int len;
@@ -248,10 +248,10 @@ static int bind_to_interface(int sd, int ifindex)
 	return 0;
 }
 
-static int setup_sockets_raw(struct ev_loop *loop, cfg_t *cfg)
+static int setup_sockets_raw(struct ev_loop *loop, conf_t *cfg)
 {
-	cfg_group_t *group;
-	cfg_iface_t *iface;
+	conf_group_t *group;
+	conf_iface_t *iface;
 
 	TAILQ_FOREACH(group, &cfg->group_list, link) {
 		TAILQ_FOREACH(iface, &group->iface_list, link) {
@@ -272,7 +272,7 @@ static int setup_sockets_raw(struct ev_loop *loop, cfg_t *cfg)
 }
 
 
-static int setup_socket_udp_separate_listen(struct ev_loop *loop, cfg_t *cfg)
+static int setup_socket_udp_separate_listen(struct ev_loop *loop, conf_t *cfg)
 {
 	int udp_listen_port = cfg->udp_listen_port;
 	int oneopt = 1;
@@ -367,8 +367,8 @@ static int setup_socket_udp(struct ev_loop *loop)
 static void cleanup(struct ev_loop *loop)
 {
 	static int first = 1;
-	cfg_group_t *group;
-	cfg_t *cfg = ev_userdata(loop);
+	conf_group_t *group;
+	conf_t *cfg = ev_userdata(loop);
 
 	if (first) {
 		first = 0;
@@ -376,7 +376,7 @@ static void cleanup(struct ev_loop *loop)
 	}
 
 	TAILQ_FOREACH(group, &cfg->group_list, link) {
-		cfg_iface_t *iface;
+		conf_iface_t *iface;
 
 		TAILQ_FOREACH(iface, &group->iface_list, link) {
 			char ifname[IFNAMSIZ];
@@ -406,7 +406,7 @@ static int status;
 
 static struct ev_loop *init(struct ev_loop *loop, char *fname)
 {
-	cfg_t *cfg = ev_userdata(loop);
+	conf_t *cfg = ev_userdata(loop);
 
 	/* Clear all old settings. */
 	cleanup(loop);
@@ -484,7 +484,7 @@ static int usage(void)
 int main(int argc, char **argv)
 {
 	struct ev_loop *loop;
-	cfg_t cfg;
+	conf_t cfg;
 	int c;
 
 	while ((c = getopt(argc, argv, "f:vdh")) != EOF) {

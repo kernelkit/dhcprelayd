@@ -89,10 +89,10 @@ static int nl_req(void *req, size_t len)
 	return err;
 }
 
-int setup_nftables(cfg_t *cfg)
+int setup_nftables(conf_t *cfg)
 {
-	cfg_group_t *group;
-	cfg_iface_t *iface;
+	conf_group_t *group;
+	conf_iface_t *iface;
 	char file[128] = "/tmp/dhcprelayd.XXXXXX";
 	char cmd[256], ifname[IFNAMSIZ];
 	FILE *fp;
@@ -156,13 +156,13 @@ err_unlink:
 	return err;
 }
 
-int cleanup_nftables(cfg_t *cfg)
+int cleanup_nftables(conf_t *cfg)
 {
-	cfg_group_t *group;
+	conf_group_t *group;
 	int anybridged = 0;
 
 	TAILQ_FOREACH(group, &cfg->group_list, link) {
-		cfg_iface_t *iface;
+		conf_iface_t *iface;
 		TAILQ_FOREACH(iface, &group->iface_list, link) {
 			if (iface_is_bridged(iface->ifindex))
 				anybridged = 1;

@@ -20,8 +20,8 @@
 #define __MISC_H__
 #include "conf.h"
 
-int setup_nftables(cfg_t *cfg);
-int cleanup_nftables(cfg_t *cfg);
+int setup_nftables(conf_t *cfg);
+int cleanup_nftables(conf_t *cfg);
 int add_arp_entry(int ifindex, unsigned char *mac, struct sockaddr_in saddr);
 int add_fdb_entry(int ifindex, unsigned char *mac);
 #endif
