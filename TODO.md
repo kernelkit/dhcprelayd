@@ -61,3 +61,10 @@ Tests
 - Renewals through the relay with `force-server-id`.
 - Several servers, global and per group.
 - Memory leaks with valgrind, including SIGHUP reload.
+
+Configuration errors
+--------------------
+
+dhcprelayd exits with status 0 when the configuration file cannot be
+read or is invalid, and logs the error with `%m`, so the message ends
+in an unrelated ": Success".
