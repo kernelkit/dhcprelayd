@@ -12,6 +12,17 @@ All notable changes to the project are documented in this file.
 ### Changes
 - Fork of the archived Westermo dhcp-helper, renamed to dhcprelayd
 - Default configuration file is now `/etc/dhcprelayd.json`
+- No longer depends on libnl, only libev and jansson are needed
+- New test suite, runs unprivileged in network namespaces, replaces the
+  Python 2 tests.  See `tests/README.md` for host requirements
+- README: diagrams of the use case and how a request is relayed
+
+### Fixes
+- Requests on a routed interface were relayed twice, so the server got
+  every DHCPDISCOVER and DHCPREQUEST two times
+- Requests were relayed with 42 bytes of trailing garbage after the DHCP
+  options
+- Fix signed/unsigned comparison warning in the configuration parser
 
 [v2.1][] - 2018-06-11
 ---------------------
