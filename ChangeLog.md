@@ -16,6 +16,11 @@ All notable changes to the project are documented in this file.
 - New test suite, runs unprivileged in network namespaces, replaces the
   Python 2 tests.  See `tests/README.md` for host requirements
 - README: diagrams of the use case and how a request is relayed
+- New `option82` setting `policy`: what to do with requests from a
+  client that already carry option 82.  The default, `replace`, removes
+  the client's option and adds the relay agent's own.  Previously a
+  second option 82 was added, and a client could pick its own
+  circuit-id
 
 ### Fixes
 - Requests on a routed interface were relayed twice, so the server got

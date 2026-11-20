@@ -117,14 +117,25 @@ static int handle_request(cfg_t *cfg, struct dhcp_packet *packet, int ifindex, s
 		/* RFC3046, 2.1.1, simply forward if giaddr set, 
 		 * without changing giaddr or adding option82.*/
 	} else {
+		struct dhcp_packet_with_opts *mess = (struct dhcp_packet_with_opts *)packet;
+		int add = cfg->opt82.enabled;
 		struct in_addr addr;
+
+		/* Replace is done by add_options() */
+		if (add && cfg->opt82.policy != OPT82_REPLACE && has_option82(mess, sz)) {
+			if (cfg->opt82.policy == OPT82_DROP) {
+				syslog2(LOG_NOTICE, "Dropping request with option 82 from client on ifindex %d", ifindex);
+				return 0;
+			}
+			add = 0;
+		}
 
 		syslog2(LOG_DEBUG, "Will relay");
 		/* plug in our address */
 
 		addr.s_addr = packet->giaddr.s_addr = group->giaddr;
-		if (cfg->opt82.enabled)
-			sz = add_options((struct dhcp_packet_with_opts *)packet, sz, ifindex, addr, group, cfg);
+		if (add)
+			sz = add_options(mess, sz, ifindex, addr, group, cfg);
 	}
 
 	if (!TAILQ_EMPTY(&group->server_list)) {

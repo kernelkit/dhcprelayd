@@ -23,5 +23,6 @@
 
 size_t add_options (struct dhcp_packet_with_opts *mess, size_t sz, int iface_index, struct in_addr iface_addr, cfg_group_t *group, cfg_t *cfg);
 size_t remove_options(struct dhcp_packet_with_opts *mess, size_t sz);
+int    has_option82  (struct dhcp_packet_with_opts *mess, size_t sz);
 
 #endif

@@ -58,7 +58,14 @@ Option 82
 
 The circuit-id defaults to the name of the port the request came in on,
 and can be set per port.  The remote-id is the hostname, the `giaddr`,
-or a configured string.  Both can also be given as hex values, see
+or a configured string.
+
+A client should never send option 82 itself, it is meant to be added by
+a relay agent.  By default the relay agent replaces it with its own, so
+a client cannot pick its own circuit-id, and with it, its address.  The
+`policy` setting can also keep it, for a trusted downstream device, or
+drop such requests.  Requests already relayed by another relay agent,
+with `giaddr` set, are always forwarded as they are.  Both can also be given as hex values, see
 [String or hex values](#string-or-hex-values).
 
 
@@ -112,6 +119,11 @@ bridged.json - More advanced case with multiple servers and running on a VLAN aw
 
 ### Configuration file
 **option82** - Should option 82 be enabled, optional
+  * **policy** - what to do with a request from a client that already
+    carries option 82, optional (default replace)
+    * **replace** - remove the client's option 82 and add our own
+    * **keep** - forward the request with the client's option 82
+    * **drop** - discard the request
   * **remote-id** - remote ID settings, optional
     * **type** - remote id type can either be manual [string or hex values](#string-or-hex-values), hostname or giaddr
     * **data** - only applicable when using manual

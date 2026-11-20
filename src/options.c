@@ -29,6 +29,7 @@
 #include <errno.h>
 #include <limits.h>
 
+#include "options.h"
 #include "packet.h"
 #include "logging.h"
 
@@ -310,6 +311,9 @@ size_t add_options(struct dhcp_packet_with_opts *mess, size_t sz, int ifindex, s
 		if (memcmp(mess->options, &cookie, sizeof(u32)) != 0)
 			return sz;
 	}
+	/* Never more than one option 82 */
+	sz = remove_options(mess, sz);
+
 	/* Find end of options, set rest of mess to 0 to prepare for additional options. */
 	tmp = option_find(mess, sz, OPTION_END, 0);
 	nbytes = end - tmp;
@@ -325,15 +329,24 @@ size_t add_options(struct dhcp_packet_with_opts *mess, size_t sz, int ifindex, s
 	return dhcp_packet_size(mess, real_end);
 }
 
+static unsigned char *find_option82(struct dhcp_packet_with_opts *mess, size_t sz)
+{
+	return option_find1(&mess->options[0] + sizeof(u32), (unsigned char *)mess + sz, OPTION_AGENT_ID, 0);
+}
+
+int has_option82(struct dhcp_packet_with_opts *mess, size_t sz)
+{
+	return find_option82(mess, sz) != NULL;
+}
+
 /* Remove option 82, returns the new size of the message */
 size_t remove_options(struct dhcp_packet_with_opts *mess, size_t sz)
 {
-	unsigned char *start = &mess->options[0] + sizeof(u32);
 	unsigned char *end = (unsigned char *)mess + sz;
 	unsigned char *opt;
 	size_t len;
 
-	opt = option_find1(start, end, OPTION_AGENT_ID, 0);
+	opt = find_option82(mess, sz);
 	if (!opt)
 		return sz;
 

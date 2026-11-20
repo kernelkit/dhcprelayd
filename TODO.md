@@ -16,17 +16,12 @@ IP address in the client VLAN.  Today every group needs a `giaddr`.
   trusted flag.
 - See RFC 3046, sec. 2.1, on relay agents that do not set `giaddr`.
 
-Existing option 82
-------------------
+Option 82 policy per port
+-------------------------
 
-A request from a client that already carries option 82 gets a second
-one appended.  Add a policy for requests with `giaddr` zero:
-
-- `keep`: forward with the existing option
-- `replace`: drop the existing option and add ours
-- `drop`: discard the request
-
-Requests already relayed (`giaddr` set) are forwarded as-is.
+The policy for requests that already carry option 82 is global.  Allow
+setting it per port, e.g., `keep` on a port towards a trusted device
+that adds its own option 82.
 
 Remote-id
 ---------
@@ -63,8 +58,6 @@ or to a file on SIGUSR1.
 Tests
 -----
 
-- Requests that already carry option 82, one test per policy.  The
-  client can send it with `udhcpc -x 0x52:HEX`.
 - Renewals through the relay with `force-server-id`.
 - Several servers, global and per group.
 - Memory leaks with valgrind, including SIGHUP reload.

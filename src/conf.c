@@ -87,10 +87,25 @@ static int read_option82(json_t *json, cfg_t *cfg)
 
 	obj = json_object_get(json, "option82");
 	if (json_is_object(obj)) {
-		json_t *remote;
+		json_t *remote, *policy;
 		const char *str;
 
 		cfg->opt82.enabled = 1;
+
+		policy = json_object_get(obj, "policy");
+		if (policy) {
+			str = json_is_string(policy) ? json_string_value(policy) : "";
+			if (!strcmp(str, "replace"))
+				cfg->opt82.policy = OPT82_REPLACE;
+			else if (!strcmp(str, "keep"))
+				cfg->opt82.policy = OPT82_KEEP;
+			else if (!strcmp(str, "drop"))
+				cfg->opt82.policy = OPT82_DROP;
+			else {
+				syslog2(LOG_ERR, "Invalid option82 policy, must be replace, keep, or drop");
+				return 1;
+			}
+		}
 
 		remote = json_object_get(obj, "remote-id");
 		if (json_is_object(remote)) {

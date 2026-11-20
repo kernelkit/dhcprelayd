@@ -62,8 +62,15 @@ typedef struct cfg_server_t {
 	int port;
 } cfg_server_t;
 
+typedef enum option82_policy_t {
+	OPT82_REPLACE,
+	OPT82_KEEP,
+	OPT82_DROP,
+} opt82_policy_t;
+
 typedef struct cfg_opt82 {
 	int enabled;
+	opt82_policy_t policy;
 	opt82_rid_type_t rid_type;
 
 	char remote_id[REMOTE_ID_LEN];

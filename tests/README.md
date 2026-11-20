@@ -108,6 +108,14 @@ and remote-id `relay1`.
 
 Topology: routed
 
+### policy
+
+A client sends its own option 82, circuit-id `old`.  With policy
+`replace` the client gets the address for circuit-id `c1`, with `keep`
+the address for `old`, and with `drop` the server gets no request.
+
+Topology: routed
+
 ### bridge
 
 IP-per-port: the clients on ports `c1` and `c2` each get the static
