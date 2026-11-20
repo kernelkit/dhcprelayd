@@ -1,6 +1,6 @@
-dhcprelayd - DHCP relay agent w/ Option 82 support
-==================================================
-[![License Badge][]][License]
+DHCP relay agent w/ Option 82 support
+=====================================
+[![License Badge][]][License] [![Release Badge][]][Release] [![GitHub Status][]][GitHub]
 
 A DHCP relay agent lets clients on one network get their address from a
 DHCP server on another.  Clients find a DHCP server by broadcasting, and
@@ -169,4 +169,8 @@ Kelley <simon@thekelleys.org.uk>.  The Westermo project is archived.
 [RFC 3046]:        https://www.rfc-editor.org/rfc/rfc3046
 [License]:         https://en.wikipedia.org/wiki/GPL_license
 [License Badge]:   https://img.shields.io/badge/License-GPL%20v2-blue.svg
+[Release]:         https://github.com/kernelkit/dhcprelayd/releases/latest
+[Release Badge]:   https://img.shields.io/github/v/release/kernelkit/dhcprelayd
+[GitHub]:          https://github.com/kernelkit/dhcprelayd/actions/workflows/build.yml/
+[GitHub Status]:   https://github.com/kernelkit/dhcprelayd/actions/workflows/build.yml/badge.svg
 [dhcp-helper]:     https://github.com/westermo/dhcp-helper
