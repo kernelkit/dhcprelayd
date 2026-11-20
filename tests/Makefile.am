@@ -10,6 +10,3 @@ TESTS               += flood.sh
 TESTS               += length.sh
 TESTS               += option82.sh
 TESTS               += reload.sh
-
-# Requests on routed interfaces are relayed twice, see TODO.md
-XFAIL_TESTS          = basic.sh

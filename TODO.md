@@ -57,10 +57,6 @@ Bugs
 
 Found by the tests in `tests/`:
 
-- Requests on a routed (not bridged) interface are relayed twice, once
-  from the raw socket on the interface and once from the UDP socket on
-  port 67, so the server gets every message twice.  `basic.sh` is
-  marked XFAIL until this is fixed.
 - Clang warns about a signed/unsigned comparison in `read_group()`.
 
 Operational data

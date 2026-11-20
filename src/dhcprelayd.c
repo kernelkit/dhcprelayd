@@ -166,14 +166,15 @@ static void packet_cb_raw(struct ev_loop *loop __attribute__ ((unused)), ev_io *
 
 	ev_io_stop(loop, w);
 
+	/* Replies are read from the UDP socket */
 	packet = packet_rcv_raw(w->fd, buf, sizeof(buf), &len, &ifindex);
-	if (packet)
+	if (packet && packet->header.op == BOOTREQUEST)
 		handle_packet(cfg, &packet->header, len, ifindex, sd_out);
 
 	ev_io_start(loop, w);
 }
 
-static void packet_cb_udp(struct ev_loop *loop __attribute__ ((unused)), ev_io *w, int revents __attribute__ ((unused)))
+static void udp_recv(struct ev_loop *loop, ev_io *w, int replies_only)
 {
 	static unsigned char buf[2048];	/* MAXIMUM_PACKET_SIZE */
 	cfg_t *cfg = ev_userdata(loop);
@@ -184,9 +185,20 @@ static void packet_cb_udp(struct ev_loop *loop __attribute__ ((unused)), ev_io *
 	ev_io_stop(loop, w);
 
 	packet = packet_rcv_udp(w->fd, buf, sizeof(buf), &len, &ifindex);
-	if (packet)
+	if (packet && (!replies_only || packet->header.op == BOOTREPLY))
 		handle_packet(cfg, &packet->header, len, ifindex, sd_out);
 	ev_io_start(loop, w);
+}
+
+static void packet_cb_udp(struct ev_loop *loop, ev_io *w, int revents __attribute__ ((unused)))
+{
+	udp_recv(loop, w, 0);
+}
+
+/* Requests to port 67 are read from the raw sockets */
+static void packet_cb_upstream(struct ev_loop *loop, ev_io *w, int revents __attribute__ ((unused)))
+{
+	udp_recv(loop, w, 1);
 }
 
 /*
@@ -345,7 +357,7 @@ static int setup_socket_udp(struct ev_loop *loop)
 		return -1;
 	}
 
-	ev_io_init(&io_upstreams, packet_cb_udp, sd_out, EV_READ);
+	ev_io_init(&io_upstreams, packet_cb_upstream, sd_out, EV_READ);
 	ev_io_start(loop, &io_upstreams);
 
 

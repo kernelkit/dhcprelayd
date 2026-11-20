@@ -91,8 +91,7 @@ Tests
 A client on a routed interface gets an address from the server pool,
 and each request reaches the server exactly once.
 
-Topology: routed.  Expected to fail until requests on routed interfaces
-are no longer relayed twice, see TODO.md.
+Topology: routed
 
 ### length
 
