@@ -288,19 +288,19 @@ size_t add_options(struct dhcp_packet_with_opts *mess, size_t sz, int ifindex, s
 	syslog2(LOG_DEBUG, "Adding options");
 
 	if (!cfg->opt82.enabled)
-		return 0;
+		return sz;
 
 	iface = find_iface_cfg(group, ifindex);
 	if (!iface) {
 		syslog2(LOG_ERR, "Could not find iface configuration for index %d", ifindex);
-		return 1;
+		return sz;
 	}
 	if (mess->header.op != BOOTREQUEST)	//|| mess->hlen > DHCP_CHADDR_MAX)
-		return 0;
+		return sz;
 
 	/* Why this? From dnsmasq. Don't add options if hardware type is 0. */
 	if (mess->header.htype == 0 && mess->header.hlen != 0)
-		return 0;
+		return sz;
 
 	/* check for DHCP rather than BOOTP */
 	if ((opt = option_find(mess, sz, OPTION_MESSAGE_TYPE, 1))) {
@@ -308,7 +308,7 @@ size_t add_options(struct dhcp_packet_with_opts *mess, size_t sz, int ifindex, s
 
 		/* only insist on a cookie for DHCP. */
 		if (memcmp(mess->options, &cookie, sizeof(u32)) != 0)
-			return 0;
+			return sz;
 	}
 	/* Find end of options, set rest of mess to 0 to prepare for additional options. */
 	tmp = option_find(mess, sz, OPTION_END, 0);
