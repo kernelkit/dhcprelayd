@@ -63,8 +63,8 @@ or to a file on SIGUSR1.
 Tests
 -----
 
-- Requests that already carry option 82, one test per policy.  Needs a
-  client that can send option 82, udhcpc cannot.
+- Requests that already carry option 82, one test per policy.  The
+  client can send it with `udhcpc -x 0x52:HEX`.
 - Renewals through the relay with `force-server-id`.
 - Several servers, global and per group.
 - Memory leaks with valgrind, including SIGHUP reload.
