@@ -122,6 +122,15 @@ A request on port `c1` is relayed once, and not flooded to port `c2`.
 
 Topology: bridged
 
+### reply
+
+Option 82 is removed from replies to the client, and nothing else is
+lost: the reply is 14 bytes shorter than the one the server sent, and
+the long domain name in it, which makes it larger than 300 bytes, is
+still there.
+
+Topology: routed
+
 ### reload
 
 After changing the circuit-id of port `c1` and sending SIGHUP to the

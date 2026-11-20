@@ -325,23 +325,25 @@ size_t add_options(struct dhcp_packet_with_opts *mess, size_t sz, int ifindex, s
 	return dhcp_packet_size(mess, real_end);
 }
 
-/* Remove option 82 before returning to client */
+/* Remove option 82, returns the new size of the message */
 size_t remove_options(struct dhcp_packet_with_opts *mess, size_t sz)
 {
-	unsigned char *tmp;
-	unsigned char *end = (unsigned char *)(mess + 1);
+	unsigned char *start = &mess->options[0] + sizeof(u32);
+	unsigned char *end = (unsigned char *)mess + sz;
+	unsigned char *opt;
+	size_t len;
 
-	tmp = option_find(mess, sz, OPTION_AGENT_ID, 0);
-	if (tmp) {
-		/* number of bytes from option 82 to end option */
-		int nbytes = end - tmp;
-		/* number of bytes for whole option 82 including option and length field */
-		int opt82_len = option_len(tmp) + 2;
+	opt = option_find1(start, end, OPTION_AGENT_ID, 0);
+	if (!opt)
+		return sz;
 
-		/* move rest of options after option 82 to where option 82 starts */
-		memmove(tmp, tmp + opt82_len, nbytes - opt82_len);
-		return dhcp_packet_size((struct dhcp_packet_with_opts *)(tmp + nbytes - opt82_len), end);
-	}
+	len = option_len(opt) + 2;
+	memmove(opt, opt + len, end - opt - len);
+	memset(end - len, 0, len);
 
-	return sz;
+	/* Keep the zero padding up to the BOOTP minimum size */
+	if (sz - len < MIN_PACKETSZ)
+		return sz < MIN_PACKETSZ ? sz : MIN_PACKETSZ;
+
+	return sz - len;
 }

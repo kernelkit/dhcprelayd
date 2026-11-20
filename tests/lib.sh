@@ -193,10 +193,14 @@ server_count()
     grep -c "$1" "$DIR/dnsmasq.log"
 }
 
-# Log DHCP requests sent or received on interface $1 to $DIR/$1.cap
+# Log DHCP requests sent or received on interface $1 to $DIR/$1.cap.
+# Optional $2 replaces the filter, the rest are extra tcpdump options.
 capture()
 {
-    tcpdump -lni "$1" 'udp dst port 67' > "$DIR/$1.cap" 2>/dev/null &
+    iface=$1
+    filter=${2:-udp dst port 67}
+    shift $(($# > 1 ? 2 : 1))
+    tcpdump -lni "$iface" "$@" "$filter" > "$DIR/$iface.cap" 2>/dev/null &
     echo $! >> "$DIR/PIDs"
 }
 

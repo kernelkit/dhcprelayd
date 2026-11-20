@@ -22,6 +22,8 @@ All notable changes to the project are documented in this file.
   every DHCPDISCOVER and DHCPREQUEST two times
 - Requests were relayed with 42 bytes of trailing garbage after the DHCP
   options
+- Replies to clients were sent with trailing garbage, as many bytes as
+  the option 82 that was removed from them
 - Fix signed/unsigned comparison warning in the configuration parser
 
 [v2.1][] - 2018-06-11

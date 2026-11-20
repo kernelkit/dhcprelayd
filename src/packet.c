@@ -180,14 +180,14 @@ int handle_reply(cfg_t *cfg, struct dhcp_packet *packet, int ifindex, ssize_t sz
 	msg.msg_controllen = 0;
 	msg.msg_namelen = sizeof(saddr);
 
-	iov.iov_base = packet;
-	iov.iov_len = sz;
-
 	/* I'm the gateway, remove options (option 82) and reset giaddr */
 	if (group) {
 		sz = remove_options((struct dhcp_packet_with_opts *)packet, sz);
 		packet->giaddr.s_addr = 0;
 	}
+
+	iov.iov_base = packet;
+	iov.iov_len = sz;
 	if (packet->ciaddr.s_addr)
 		saddr.sin_addr = packet->ciaddr;
 	else if (ntohs(packet->flags) & 0x8000 || !packet->yiaddr.s_addr || packet->hlen > 14) {
