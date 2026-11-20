@@ -1,0 +1,96 @@
+name: Release General
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+*'
+
+permissions:
+  contents: write
+
+jobs:
+  tarball:
+    name: Release tarball
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - uses: actions/checkout@v6
+      - name: Installing dependencies ...
+        run: |
+          # Fail fast when the apt mirror stalls
+          printf 'Acquire::Retries "3";\nAcquire::http::Timeout "15";\nAcquire::https::Timeout "15";\n' \
+              | sudo tee /etc/apt/apt.conf.d/99-timeout >/dev/null
+          sudo apt-get -y update
+          sudo apt-get -y install pkg-config libjansson-dev libev-dev \
+               dnsmasq-base busybox nftables tcpdump
+      - name: Enable unprivileged user namespaces
+        run: |
+          sudo sysctl kernel.apparmor_restrict_unprivileged_userns=0
+      - name: Creating Makefiles ...
+        run: |
+          ./autogen.sh
+          ./configure
+      - name: Build release ...
+        run: |
+          ver=$(sed -n 's/^AC_INIT(\[[^]]*\], *\[\([^]]*\)\].*/\1/p' configure.ac)
+          if [ "v$ver" != "${GITHUB_REF_NAME}" ]; then
+              echo "configure.ac is at $ver, tag says ${GITHUB_REF_NAME}"
+              exit 1
+          fi
+          make distcheck
+          mkdir -p artifacts/
+          mv dhcprelayd-*.tar.* artifacts/
+          (cd artifacts && for f in *; do md5sum "$f" > "$f.md5"; done)
+          ls -lF artifacts/
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: dhcprelayd-test-release
+          path: dhcprelayd-*/_build/sub/tests/*.log
+      - name: Upload tarball
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-tarball
+          path: artifacts/*
+          if-no-files-found: error
+          retention-days: 1
+
+  release:
+    name: Publish release
+    needs: [ tarball ]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - name: Setting release variables ...
+        id: build
+        run: |
+          ver=${GITHUB_REF#refs/tags/}
+          if echo "$ver" | grep -qE '(-alpha|-beta|-rc)[0-9]*$'; then
+            echo "pre=true"     >> $GITHUB_OUTPUT
+            echo "latest=false" >> $GITHUB_OUTPUT
+          else
+            echo "pre=false"    >> $GITHUB_OUTPUT
+            echo "latest=true"  >> $GITHUB_OUTPUT
+          fi
+      - name: Download artifacts ...
+        uses: actions/download-artifact@v7
+        with:
+          pattern: release-*
+          path: artifacts
+          merge-multiple: true
+      - name: Extract ChangeLog entry ...
+        run: |
+          awk '/-----*/{if (x == 1) exit; x=1;next}x' ChangeLog.md \
+              |head -n -1 > release.md
+          cat release.md
+      - uses: ncipollo/release-action@v1
+        with:
+          name: dhcprelayd ${{ github.ref_name }}
+          prerelease: ${{ steps.build.outputs.pre }}
+          makeLatest: ${{ steps.build.outputs.latest }}
+          bodyFile: "release.md"
+          artifacts: "artifacts/*"
