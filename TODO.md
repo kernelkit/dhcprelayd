@@ -52,13 +52,6 @@ nftables
 Rules are applied by running `nft` with `system()`.  Use libnftables, or
 document the rules so the system integrator can install them.
 
-Bugs
-----
-
-Found by the tests in `tests/`:
-
-- Clang warns about a signed/unsigned comparison in `read_group()`.
-
 Operational data
 ----------------
 

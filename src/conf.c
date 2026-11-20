@@ -215,7 +215,7 @@ static int read_servers(json_t *json, cfg_t *cfg, cfg_group_t *group)
 static int read_group(json_t *json, cfg_t *cfg)
 {
 	json_t *obj, *arr;
-	int i;
+	size_t i;
 	struct ifaddrs *ifap, *ifa;
 	cfg_group_t *group = NULL;
 
