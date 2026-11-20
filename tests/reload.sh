@@ -37,11 +37,7 @@ client c1 || { show_logs; FAIL "No lease before reload"; }
 echo "c1 got $(lease c1), expected 10.0.0.41"
 [ "$(lease c1)" = "10.0.0.41" ] || { show_logs; FAIL; }
 
-print "Reloading relay agent ..."
-config after
-kill -HUP "$(cat "$DIR/relay.pid")"
-sleep 1
-kill -0 "$(cat "$DIR/relay.pid")" 2>/dev/null || { show_logs; FAIL "Relay agent died on reload"; }
+reload config after
 
 client c1 || { show_logs; FAIL "No lease after reload"; }
 echo "c1 got $(lease c1), expected 10.0.0.42"

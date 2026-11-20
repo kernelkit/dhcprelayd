@@ -160,11 +160,29 @@ relay()
     }
 }
 
+# Rewrite the configuration with function $1, passing the rest of the
+# arguments to it, and reload the relay agent with SIGHUP
+reload()
+{
+    func=$1
+    shift
+    print "Reloading relay agent ..."
+    "$func" "$@"
+    kill -HUP "$(cat "$DIR/relay.pid")"
+    sleep 1
+    kill -0 "$(cat "$DIR/relay.pid")" 2>/dev/null || {
+	show_logs
+	FAIL "Relay agent died on reload"
+    }
+}
+
 # Request a lease with udhcpc in netns $1, the address is saved in
-# $DIR/$1.lease.  Returns non-zero if no lease was acquired.
+# $DIR/$1.lease.  Extra arguments are passed to udhcpc.  Returns
+# non-zero if no lease was acquired.
 client()
 {
     ns=$1
+    shift
 
     print "Requesting lease in $ns ..."
     cat <<-EOF > "$DIR/udhcpc.sh"
@@ -176,7 +194,7 @@ client()
     ln -sf "$DIR/udhcpc.sh" "$DIR/$ns.sh"
     rm -f "$DIR/$ns.lease"
 
-    nsrun "$ns" busybox udhcpc -f -q -n -t 3 -T 2 -i eth0 -s "$DIR/$ns.sh"
+    nsrun "$ns" busybox udhcpc -f -q -n -t 3 -T 2 -i eth0 -s "$DIR/$ns.sh" "$@"
     [ -s "$DIR/$ns.lease" ] || return 1
     echo "$ns got lease $(cat "$DIR/$ns.lease")"
 }
