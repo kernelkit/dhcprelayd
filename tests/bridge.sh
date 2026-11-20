@@ -16,22 +16,16 @@ topo bridged
 bridge link set dev c1 learning off
 bridge link set dev c2 learning off
 
-cat <<EOF > "$DIR/relay.json"
-{
-    "option82": {
-        "remote-id": { "type": "manual", "data": "switch1" }
-    },
-    "server": [ { "address": "20.0.0.2" } ],
-    "group":  [
-        {
-            "ifname": "vlan1",
-            "giaddr": "10.0.0.1",
-            "iface":  [
-                { "ifname": "c1" },
-                { "ifname": "c2", "circuit-id": "cabinet-3" }
-            ]
-        }
-    ]
+cat <<EOF > "$DIR/relay.conf"
+server 20.0.0.2 {}
+option82 {
+    remote-id = switch1
+}
+interface vlan1 {
+    port c1 {}
+    port c2 {
+        circuit-id = cabinet-3
+    }
 }
 EOF
 

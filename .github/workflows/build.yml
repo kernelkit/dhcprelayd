@@ -24,7 +24,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get -y update
-          sudo apt-get -y install pkg-config libjansson-dev libev-dev \
+          sudo apt-get -y install pkg-config libconfuse-dev libev-dev \
                dnsmasq-base busybox nftables tcpdump
       - uses: actions/checkout@v6
       - name: Configure

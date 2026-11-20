@@ -146,12 +146,12 @@ server()
     sleep 1
 }
 
-# Start the relay agent with configuration file $DIR/relay.json
+# Start the relay agent with configuration file $DIR/relay.conf
 relay()
 {
     print "Starting relay agent ..."
-    cat "$DIR/relay.json"
-    stdbuf -oL -eL "$DHCPRELAYD" -d -f "$DIR/relay.json" > "$DIR/relay.log" 2>&1 &
+    cat "$DIR/relay.conf"
+    stdbuf -oL -eL "$DHCPRELAYD" -d -f "$DIR/relay.conf" > "$DIR/relay.log" 2>&1 &
     echo $! > "$DIR/relay.pid"
     sleep 1
     kill -0 "$(cat "$DIR/relay.pid")" 2>/dev/null || {

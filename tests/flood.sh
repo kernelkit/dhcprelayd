@@ -11,16 +11,11 @@ check_dep tcpdump
 print "Creating world ..."
 topo bridged
 
-cat <<EOF > "$DIR/relay.json"
-{
-    "server": [ { "address": "20.0.0.2" } ],
-    "group":  [
-        {
-            "ifname": "vlan1",
-            "giaddr": "10.0.0.1",
-            "iface":  [ { "ifname": "c1" }, { "ifname": "c2" } ]
-        }
-    ]
+cat <<EOF > "$DIR/relay.conf"
+server 20.0.0.2 {}
+interface vlan1 {
+    port c1 {}
+    port c2 {}
 }
 EOF
 

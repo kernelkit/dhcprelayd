@@ -93,10 +93,19 @@ and each request reaches the server exactly once.
 
 Topology: routed
 
+### hex
+
+A binary circuit-id and remote-id, set with `circuit-id-hex` and
+`remote-id-hex`, reach the server intact, including the NUL byte the
+circuit-id starts with.
+
+Topology: routed
+
 ### invalid
 
-An invalid configuration makes the relay agent exit with status 1 at
-startup.
+Each of a set of invalid configurations, from a bad policy or hex value
+to an unknown interface or a missing server, makes the relay agent exit
+with status 1 at startup.
 
 Topology: routed
 

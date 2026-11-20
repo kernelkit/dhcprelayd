@@ -12,17 +12,13 @@ topo bridged
 
 config()
 {
-    cat <<-EOF > "$DIR/relay.json"
-	{
-	    "option82": {},
-	    "server": [ { "address": "20.0.0.2" } ],
-	    "group":  [
-	        {
-	            "ifname": "vlan1",
-	            "giaddr": "10.0.0.1",
-	            "iface":  [ { "ifname": "c1", "circuit-id": "$1" } ]
-	        }
-	    ]
+    cat <<-EOF > "$DIR/relay.conf"
+	option82 {}
+	server 20.0.0.2 {}
+	interface vlan1 {
+	    port c1 {
+	        circuit-id = $1
+	    }
 	}
 	EOF
 }

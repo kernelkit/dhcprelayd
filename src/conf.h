@@ -22,9 +22,7 @@
 #include "queue.h"
 #include <ev.h>
 
-#define SCRIPT_LEN 100
-#define CIRCUIT_ID_LEN 50
-#define REMOTE_ID_LEN  50
+#define OPT82_ID_LEN 50
 
 typedef enum option82_rid_type_t {
 	RID_TYPE_HOSTNAME,
@@ -32,17 +30,13 @@ typedef enum option82_rid_type_t {
 	RID_TYPE_MANUAL,
 } opt82_rid_type_t;
 
-typedef enum option82_cid_type_t {
-	CID_TYPE_IFNAME,
-	CID_TYPE_MANUAL,
-} opt82_cid_type_t;
+TAILQ_HEAD(server_list, conf_server_t);
 
 typedef struct conf_iface_t {
 	TAILQ_ENTRY(conf_iface_t) link;
 	int ifindex;
 
-	opt82_cid_type_t type;
-	char circuit_id[CIRCUIT_ID_LEN];
+	char circuit_id[OPT82_ID_LEN];
 	int circuit_id_len;
 	ev_io io;
 	int sd;			/* sd in io, for clean-up access */
@@ -51,7 +45,7 @@ typedef struct conf_iface_t {
 typedef struct conf_group_t {
 	TAILQ_ENTRY(conf_group_t) link;
 	TAILQ_HEAD(, conf_iface_t) iface_list;
-	TAILQ_HEAD(, conf_server_t) server_list;
+	struct server_list server_list;
 	unsigned int ifindex;
 	int giaddr;
 } conf_group_t;
@@ -73,12 +67,12 @@ typedef struct conf_opt82 {
 	opt82_policy_t policy;
 	opt82_rid_type_t rid_type;
 
-	char remote_id[REMOTE_ID_LEN];
+	char remote_id[OPT82_ID_LEN];
 	int remote_id_len;
 } conf_opt82_t;
 
 typedef struct conf_t {
-	TAILQ_HEAD(, conf_server_t) server_list;
+	struct server_list server_list;
 	TAILQ_HEAD(, conf_group_t) group_list;
 	conf_opt82_t opt82;
 	int force_server_id;

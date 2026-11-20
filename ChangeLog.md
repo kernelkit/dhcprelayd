@@ -11,8 +11,13 @@ All notable changes to the project are documented in this file.
 ---------------------
 ### Changes
 - Fork of the archived Westermo dhcp-helper, renamed to dhcprelayd
-- Default configuration file is now `/etc/dhcprelayd.json`
-- No longer depends on libnl, only libev and jansson are needed
+- New configuration file format, `/etc/dhcprelayd.conf`, parsed with
+  libConfuse, replaces the JSON format.  Each interface to relay from is
+  an `interface` section, with its bridge ports as `port` sections.
+  Binary circuit-id and remote-id values are set as colon separated hex
+  with `circuit-id-hex` and `remote-id-hex`.  See the README and the
+  `examples/` directory
+- Depends only on libev and libConfuse, no longer on libnl and jansson
 - New test suite, runs unprivileged in network namespaces, replaces the
   Python 2 tests.  See `tests/README.md` for host requirements
 - README: diagrams of the use case and how a request is relayed
@@ -33,7 +38,6 @@ All notable changes to the project are documented in this file.
   request without the magic cookie, were relayed with a length of 0
 - dhcprelayd exited with status 0 when the configuration file was
   invalid, at startup or on SIGHUP, now it exits with status 1
-- Fix signed/unsigned comparison warning in the configuration parser
 
 [v2.1][] - 2018-06-11
 ---------------------

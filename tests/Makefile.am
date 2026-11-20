@@ -1,4 +1,4 @@
-EXTRA_DIST           = README.md lib.sh basic.sh bridge.sh flood.sh invalid.sh length.sh option82.sh policy.sh reload.sh reply.sh
+EXTRA_DIST           = README.md lib.sh basic.sh bridge.sh flood.sh hex.sh invalid.sh length.sh option82.sh policy.sh reload.sh reply.sh
 CLEANFILES           = *~ *.trs *.log
 TEST_EXTENSIONS      = .sh
 TESTS_ENVIRONMENT    = unshare -mrun --map-auto
@@ -7,6 +7,7 @@ AM_TESTS_ENVIRONMENT = DHCPRELAYD=$(abs_top_builddir)/src/dhcprelayd; export DHC
 TESTS                = basic.sh
 TESTS               += bridge.sh
 TESTS               += flood.sh
+TESTS               += hex.sh
 TESTS               += invalid.sh
 TESTS               += length.sh
 TESTS               += option82.sh

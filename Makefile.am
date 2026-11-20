@@ -4,6 +4,7 @@ ACLOCAL_AMFLAGS = ${ACLOCAL_FLAGS}
 
 doc_DATA            = README.md ChangeLog.md
 EXTRA_DIST          = README.md ChangeLog.md doc/option82.svg \
+                      examples/simple.conf examples/bridged.conf \
                       doc/packet-flow.svg doc/use-case.svg
 dist_man8_MANS      = dhcprelayd.8
 dist_noinst_SCRIPTS = autogen.sh

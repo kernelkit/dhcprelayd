@@ -9,11 +9,9 @@
 print "Creating world ..."
 topo routed
 
-cat <<EOF > "$DIR/relay.json"
-{
-    "server": [ { "address": "20.0.0.2" } ],
-    "group":  [ { "giaddr": "10.0.0.1" } ]
-}
+cat <<EOF > "$DIR/relay.conf"
+server 20.0.0.2 {}
+interface c1 {}
 EOF
 
 server

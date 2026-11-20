@@ -5,7 +5,7 @@ Layer 2 relay mode
 ------------------
 
 Insert option 82 without acting as a gateway, for switches that have no
-IP address in the client VLAN.  Today every group needs a `giaddr`.
+IP address in the client VLAN.  Today every interface needs a `giaddr`.
 
 - Leave `giaddr` at zero, add option 82 with circuit-id/remote-id, and
   send the request on out the uplink port(s) instead of unicasting it to
@@ -27,19 +27,7 @@ Remote-id
 ---------
 
 Add a `mac` type, base MAC address of the system.  Today there is
-`hostname`, `giaddr` and `manual`.
-
-Per-port enable
----------------
-
-Allow disabling relay on a port in a group, for ports towards other
-switches or towards the servers.
-
-Configuration file
-------------------
-
-Replace the JSON configuration with something easier to write by hand
-and to generate, and drop the jansson dependency.
+`hostname`, `giaddr`, and a fixed `remote-id` or `remote-id-hex`.
 
 nftables
 --------
@@ -66,6 +54,6 @@ or to a file on SIGUSR1.
 Tests
 -----
 
-- Renewals through the relay with `force-server-id`.
-- Several servers, global and per group.
+- Renewals through the relay with `force-server-identity`.
+- Several servers, global and per interface.
 - Memory leaks with valgrind, including SIGHUP reload.

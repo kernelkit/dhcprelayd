@@ -23,7 +23,7 @@ jobs:
           printf 'Acquire::Retries "3";\nAcquire::http::Timeout "15";\nAcquire::https::Timeout "15";\n' \
               | sudo tee /etc/apt/apt.conf.d/99-timeout >/dev/null
           sudo apt-get -y update
-          sudo apt-get -y install pkg-config libjansson-dev libev-dev \
+          sudo apt-get -y install pkg-config libconfuse-dev libev-dev \
                dnsmasq-base busybox nftables tcpdump
       - name: Enable unprivileged user namespaces
         run: |

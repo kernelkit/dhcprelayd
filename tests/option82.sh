@@ -9,14 +9,12 @@
 print "Creating world ..."
 topo routed
 
-cat <<EOF > "$DIR/relay.json"
-{
-    "option82": {
-        "remote-id": { "type": "manual", "data": "relay1" }
-    },
-    "server": [ { "address": "20.0.0.2" } ],
-    "group":  [ { "giaddr": "10.0.0.1", "iface": [ { "ifname": "c1" } ] } ]
+cat <<EOF > "$DIR/relay.conf"
+server 20.0.0.2 {}
+option82 {
+    remote-id = relay1
 }
+interface c1 {}
 EOF
 
 server --dhcp-circuitid=set:port,c1 --dhcp-remoteid=set:agent,relay1	\

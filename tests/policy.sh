@@ -19,12 +19,12 @@ topo routed
 
 config()
 {
-    cat <<-EOF > "$DIR/relay.json"
-	{
-	    "option82": { "policy": "$1" },
-	    "server": [ { "address": "20.0.0.2" } ],
-	    "group":  [ { "giaddr": "10.0.0.1", "iface": [ { "ifname": "c1" } ] } ]
+    cat <<-EOF > "$DIR/relay.conf"
+	server 20.0.0.2 {}
+	option82 {
+	    policy = $1
 	}
+	interface c1 {}
 	EOF
 }
 

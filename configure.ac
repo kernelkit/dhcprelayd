@@ -39,7 +39,7 @@ AC_CHECK_HEADERS([net/if_arp.h])
 # Check for pkg-config first, warn if it's not installed
 PKG_PROG_PKG_CONFIG
 
-PKG_CHECK_MODULES([JANSSON], [jansson])
+PKG_CHECK_MODULES([CONFUSE], [libconfuse >= 3.3])
 
 AC_CHECK_HEADER([ev.h],
     [AC_CHECK_LIB([ev], [ev_loop_new],

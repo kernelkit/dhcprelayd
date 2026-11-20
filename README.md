@@ -75,35 +75,27 @@ Getting started
 On a bridge, dhcprelayd needs nftables, both kernel support and the
 `nft` tool.
 
-dhcprelayd requires a configuration file to operate correctly (default
-read from `/etc/dhcprelayd.json` or specified via the `-f`
-option). The simplest configuration look like this:
+dhcprelayd reads its configuration from `/etc/dhcprelayd.conf`, or the
+file given with `-f`.  The simplest configuration looks like this:
 
 ```
-{
-    "server": [
-        {
-            "address": "198.19.10.2"
-        }],
-    "group": [
-        {
-            "giaddr": "198.19.20.1"
-        }
-    ]
-}
+server 198.19.10.2 {}
+
+interface eth1 {}
 ```
 
-This configuration will listen for DHCP request on the local interface
-which has the IP address 198.19.20.1. An incoming DHCP request will
-then be relayed to a DHCP server at IP address 198.19.10.2.
+dhcprelayd listens for DHCP requests on `eth1` and relays them to the
+DHCP server at 198.19.10.2, with the first IPv4 address of `eth1` as
+the gateway address (giaddr).
 
 
 Building
 --------
 
-Requirements on an Ubuntu 16.04 system:
+dhcprelayd needs [libConfuse][] 3.3 or later and [libev][].  On Debian
+and Ubuntu:
 ```
-apt-get install libjansson-dev libev-dev
+apt-get install libconfuse-dev libev-dev
 ```
 Build dhcprelayd:
 ```
@@ -114,60 +106,58 @@ Build dhcprelayd:
 Configuration
 -------------
 
-simple.json - A very simple case where you only run the relay agent on one interface and no bridge.
-bridged.json - More advanced case with multiple servers and running on a VLAN aware bridge.
+The file is in [libConfuse][] format: `key = value` settings, and
+sections with a name and a body in braces.  Comments start with `#`.
+See [simple.conf](examples/simple.conf) for a routed interface, and
+[bridged.conf](examples/bridged.conf) for IP address per port on a VLAN
+filtering bridge.
 
-### Configuration file
-**option82** - Should option 82 be enabled, optional
+**server ADDRESS { }** - DHCP server to relay requests to, at least one,
+here or in each interface.  Requests are sent to all servers.
+  * **port** - UDP port of the server, default 67
+
+**force-server-identity** - replace the server identifier (option 54) in
+replies with the gateway address, so renewals are also relayed, for
+servers without support for the server identifier override sub-option.
+Default false.
+
+**udp-listen-port** - also receive requests and server replies on this
+UDP port, e.g. from servers or relay agents that use a port other than
+67.  Default 67, no extra port
+
+**option82 { }** - add the relay agent information option (82) to each
+request, and remove it from replies.  Without this section the option
+is not added.
   * **policy** - what to do with a request from a client that already
-    carries option 82, optional (default replace)
-    * **replace** - remove the client's option 82 and add our own
-    * **keep** - forward the request with the client's option 82
-    * **drop** - discard the request
-  * **remote-id** - remote ID settings, optional
-    * **type** - remote id type can either be manual [string or hex values](#string-or-hex-values), hostname or giaddr
-    * **data** - only applicable when using manual
+    carries option 82, default `replace`
+    * `replace` - remove the client's option 82 and add our own
+    * `keep` - forward the request with the client's option 82
+    * `drop` - discard the request
+  * **remote-id-type** - `hostname`, default, or `giaddr`
+  * **remote-id** - fixed remote-id as text
+  * **remote-id-hex** - fixed remote-id as bytes, see below
 
-**server** - array of servers, optional
-  * **address** - IPv4 address of server, required
-  * **port** - TCP port for the server, optional (default port 67)
+  Set at most one of the three remote-id settings.
 
-**group** - array of objects, required
-  * **giaddr** - Local address to use when communicate with server, required
-  * **ifname** - interface to broadcast answers to, if not specified it is the interface with giaddr, optional
-  * **iface** - array of objects, optional
-    * **ifname** - the name of the interface, required
-    * **circuit-id** - value to send to the server, see [String or hex values](#string-or-hex-values)
-    * **server** - object of objects, optional if specified globally, override global configured servers
-        * **address** - Where to send, required
-        * **port** - TCP port for the server, optional (default port 67)
+**interface NAME { }** - relay requests received on this interface, at
+least one is required
+  * **giaddr** - gateway address, sent to the server and used by the
+    server to select the subnet.  An IPv4 address, or `auto`, default,
+    for the first IPv4 address of the interface
+  * **server ADDRESS { }** - servers for this interface, replace the
+    global ones
+  * **port NAME { }** - bridge port to relay requests from.  Without
+    ports, requests are relayed from the interface itself
+    * **circuit-id** - circuit-id as text, default the port name
+    * **circuit-id-hex** - circuit-id as bytes, see below
 
-### String or hex values
-Circuit-id and remote-id can be entered as hex values as well as string.
+The `-hex` settings take colon separated pairs of hex digits, e.g.
+`c0:ff:ee`, for values that are not text, including NUL bytes.  Set
+either the text or the hex setting, not both.  Values are at most 50
+bytes.
 
-As raw hex values:
-```
-    "option82": {
-        "remote-id": {
-            "type": "manual",
-            "data": [
-                "0x5a",
-                "0x5a",
-                "0x5a",
-                "0x5a"
-            ]
-        }
-    },
-```
-as a string:
-```
-    "option82": {
-        "remote-id": {
-            "type": "manual",
-            "data": "test"
-        }
-    },
-```
+A text value with spaces, or with one of `#={}(),+` in it, must be
+quoted, e.g. `circuit-id = "cabinet 3"`.
 
 
 Origin & References
@@ -186,3 +176,5 @@ Kelley <simon@thekelleys.org.uk>.  The Westermo project is archived.
 [GitHub]:          https://github.com/kernelkit/dhcprelayd/actions/workflows/build.yml/
 [GitHub Status]:   https://github.com/kernelkit/dhcprelayd/actions/workflows/build.yml/badge.svg
 [dhcp-helper]:     https://github.com/westermo/dhcp-helper
+[libConfuse]:      https://github.com/libconfuse/libconfuse
+[libev]:           http://software.schmorp.de/pkg/libev.html

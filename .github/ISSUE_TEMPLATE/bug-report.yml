@@ -28,7 +28,7 @@ body:
       value: |
         For logs, commands, etc., please use triple backticks:
         ```
-        $ dhcprelayd -d -f /etc/dhcprelayd.json
+        $ dhcprelayd -d -f /etc/dhcprelayd.conf
         ```
     validations:
       required: true

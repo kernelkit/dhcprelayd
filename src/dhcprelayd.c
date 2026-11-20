@@ -48,7 +48,7 @@ static ev_signal sigterm_watcher;
 static ev_io io_upstreams;
 static ev_io io_upstreams_separate_listen;
 
-static char config_file[128] = "/etc/dhcprelayd.json";
+static char config_file[128] = "/etc/dhcprelayd.conf";
 
 static int get_ifindex(struct msghdr *msg)
 {
