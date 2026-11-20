@@ -6,7 +6,7 @@
 . "$(dirname "$0")/lib.sh"
 
 check_dep nft
-check_dep tshark
+check_dep tcpdump
 
 print "Creating world ..."
 topo bridged
@@ -28,15 +28,14 @@ server
 relay
 
 print "Starting collector on c2 ..."
-nsrun c2 tshark -lni eth0 -w "$DIR/c2.pcap" 'udp port 67' 2>/dev/null &
-echo $! >> "$DIR/PIDs"
-sleep 2
+capture c2
+sleep 1
 
 client c1 || { show_logs; FAIL "No lease"; }
 sleep 1
 
 print "Analyzing ..."
-flooded=$(tshark -r "$DIR/c2.pcap" 2>/dev/null | wc -l)
+flooded=$(wc -l < "$DIR/c2.cap")
 echo "c2 saw $flooded requests from c1, expected 0"
 [ "$flooded" -eq 0 ] || { show_logs; FAIL; }
 

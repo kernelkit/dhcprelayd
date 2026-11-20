@@ -21,13 +21,12 @@ The following tools must be in `$PATH`:
   - `dnsmasq`: the DHCP server
   - `busybox`: with the `udhcpc` applet
   - `nft`: nftables, used by dhcprelayd on bridge ports
-  - `tshark`: to check what is sent on the wire, `tcpdump -w` does not
-    work in a user namespace
+  - `tcpdump`: to check what is sent on the wire
   - `stdbuf`: coreutils
 
 On Debian and Ubuntu:
 
-    sudo apt install iproute2 util-linux dnsmasq-base busybox nftables tshark
+    sudo apt install iproute2 util-linux dnsmasq-base busybox nftables tcpdump
 
 The `dnsmasq-base` package has the binary without the system service.
 A test that lacks a tool exits with 77 and is reported as SKIP.

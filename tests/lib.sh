@@ -193,6 +193,13 @@ server_count()
     grep -c "$1" "$DIR/dnsmasq.log"
 }
 
+# Log DHCP requests sent or received on interface $1 to $DIR/$1.cap
+capture()
+{
+    tcpdump -lni "$1" 'udp dst port 67' > "$DIR/$1.cap" 2>/dev/null &
+    echo $! >> "$DIR/PIDs"
+}
+
 show_logs()
 {
     print "Relay agent log"
