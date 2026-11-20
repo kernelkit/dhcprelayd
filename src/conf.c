@@ -423,22 +423,25 @@ static int read_interfaces(cfg_t *cfg, conf_t *conf)
 	return rc;
 }
 
-int conf_read(conf_t *conf, char *file)
+conf_t *conf_read(const char *file)
 {
+	conf_t *conf;
 	cfg_t *cfg;
 	int rc = 1;
 
-	memset(conf, 0, sizeof(*conf));
+	conf = calloc(1, sizeof(*conf));
+	if (!conf) {
+		syslog2(LOG_ERR, "Failed allocating memory: %s", strerror(errno));
+		return NULL;
+	}
 	TAILQ_INIT(&conf->server_list);
 	TAILQ_INIT(&conf->group_list);
-
-	if (!file)
-		return 1;
 
 	cfg = cfg_init(opts, CFGF_NONE);
 	if (!cfg) {
 		syslog2(LOG_ERR, "Failed initializing configuration parser: %s", strerror(errno));
-		return 1;
+		free(conf);
+		return NULL;
 	}
 	cfg_set_error_function(cfg, conf_error);
 	cfg_set_validate_func(cfg, "udp-listen-port", valid_port);
@@ -472,16 +475,21 @@ int conf_read(conf_t *conf, char *file)
 	rc = 0;
 done:
 	cfg_free(cfg);
-	if (rc)
+	if (rc) {
 		conf_free(conf);
+		return NULL;
+	}
 
-	return rc;
+	return conf;
 }
 
 void conf_free(conf_t *conf)
 {
 	conf_group_t *group, *itemp;
 	conf_server_t *server, *stemp;
+
+	if (!conf)
+		return;
 
 	TAILQ_FOREACH_SAFE(group, &conf->group_list, link, itemp) {
 		conf_iface_t *iface, *ptemp;
@@ -502,4 +510,6 @@ void conf_free(conf_t *conf)
 		TAILQ_REMOVE(&conf->server_list, server, link);
 		free(server);
 	}
+
+	free(conf);
 }

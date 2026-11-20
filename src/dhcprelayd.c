@@ -366,14 +366,11 @@ static int setup_socket_udp(struct ev_loop *loop)
 
 static void cleanup(struct ev_loop *loop)
 {
-	static int first = 1;
 	conf_group_t *group;
 	conf_t *cfg = ev_userdata(loop);
 
-	if (first) {
-		first = 0;
+	if (!cfg)
 		return;
-	}
 
 	TAILQ_FOREACH(group, &cfg->group_list, link) {
 		conf_iface_t *iface;
@@ -400,49 +397,50 @@ static void cleanup(struct ev_loop *loop)
 
 	cleanup_nftables(cfg);
 	conf_free(cfg);
+	ev_set_userdata(loop, NULL);
 }
 
 static int status;
 
-static struct ev_loop *init(struct ev_loop *loop, char *fname)
+/* Replace the running configuration with @cfg */
+static int init(struct ev_loop *loop, conf_t *cfg)
 {
-	conf_t *cfg = ev_userdata(loop);
-
-	/* Clear all old settings. */
 	cleanup(loop);
-	if (!cfg || conf_read(cfg, fname)) {
-		syslog2(LOG_ERR, "Failed reading configuration file %s", fname);
-		ev_break(loop, EVBREAK_ALL);
-		return NULL;
-	}
+	ev_set_userdata(loop, cfg);
 
 	if (setup_sockets_raw(loop, cfg) || setup_socket_udp(loop) ||
 	    setup_socket_udp_separate_listen(loop, cfg)) {
 		syslog2(LOG_ERR, "Failed setting up required sockets.");
-		ev_break(loop, EVBREAK_ALL);
-		return NULL;
+		return 1;
 	}
 
 	if (setup_nftables(cfg)) {
 		syslog2(LOG_ERR, "Failed setting up nftables.");
-		ev_break(loop, EVBREAK_ALL);
-		return NULL;
+		return 1;
 	}
 
-	return loop;
+	return 0;
 }
 
 static void sigcb(struct ev_loop *loop, ev_signal *w, int rev __attribute__ ((unused)))
 {
+	conf_t *cfg;
+
 	switch (w->signum) {
 	case SIGHUP:
-		if (!init(loop, config_file))
+		cfg = conf_read(config_file);
+		if (!cfg) {
+			syslog2(LOG_ERR, "Failed reading configuration file %s, keeping the old one", config_file);
+			break;
+		}
+		if (init(loop, cfg)) {
 			status = 1;
+			ev_break(loop, EVBREAK_ALL);
+		}
 		break;
 
 	default:
 		/* Currently graceful shutdown on all other signals */
-		cleanup(loop);
 		ev_break(loop, EVBREAK_ALL);
 		break;
 	}
@@ -484,7 +482,7 @@ static int usage(void)
 int main(int argc, char **argv)
 {
 	struct ev_loop *loop;
-	conf_t cfg;
+	conf_t *cfg;
 	int c;
 
 	while ((c = getopt(argc, argv, "f:vdh")) != EOF) {
@@ -518,16 +516,18 @@ int main(int argc, char **argv)
 
 	loop = ev_default_loop(0);
 
-	ev_set_userdata(loop, &cfg);
 	init_signals(loop);
-	loop = init(loop, config_file);
 
-	if (loop)
-		ev_run(loop, 0);
-	else
+	cfg = conf_read(config_file);
+	if (!cfg) {
+		syslog2(LOG_ERR, "Failed reading configuration file %s", config_file);
 		status = 1;
+	} else if (init(loop, cfg))
+		status = 1;
+	else
+		ev_run(loop, 0);
 
-	conf_free(&cfg);
+	cleanup(loop);
 	close(sd_out);
 	close(sd_separate_in);
 

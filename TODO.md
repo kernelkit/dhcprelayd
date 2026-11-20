@@ -35,14 +35,6 @@ nftables
 Rules are applied by running `nft` with `system()`.  Use libnftables, or
 document the rules so the system integrator can install them.
 
-Reload
-------
-
-On SIGHUP the old configuration is freed before the new one is read, so
-an invalid configuration stops the relay agent, with exit status 1.
-Read and validate the new configuration first, and keep running with
-the old one if it is invalid.
-
 Operational data
 ----------------
 

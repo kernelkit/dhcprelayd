@@ -79,6 +79,6 @@ typedef struct conf_t {
 	int udp_listen_port;
 } conf_t;
 
-int conf_read(conf_t *cfg, char *file);
+conf_t *conf_read(const char *file);
 void conf_free(conf_t *cfg);
 #endif

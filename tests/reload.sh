@@ -1,6 +1,8 @@
 #!/bin/sh
 # Verify that SIGHUP reloads the configuration: after changing the
 # circuit-id of port c1 the client gets the address for the new one.
+# An invalid configuration on SIGHUP is rejected and the relay agent
+# keeps running with the one it has.
 
 # shellcheck source=/dev/null
 . "$(dirname "$0")/lib.sh"
@@ -36,6 +38,12 @@ echo "c1 got $(lease c1), expected 10.0.0.41"
 reload config after
 
 client c1 || { show_logs; FAIL "No lease after reload"; }
+echo "c1 got $(lease c1), expected 10.0.0.42"
+[ "$(lease c1)" = "10.0.0.42" ] || { show_logs; FAIL; }
+
+reload config ""
+
+client c1 || { show_logs; FAIL "No lease after invalid reload"; }
 echo "c1 got $(lease c1), expected 10.0.0.42"
 [ "$(lease c1)" = "10.0.0.42" ] || { show_logs; FAIL; }
 

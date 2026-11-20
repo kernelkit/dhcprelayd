@@ -37,7 +37,9 @@ All notable changes to the project are documented in this file.
 - Requests the relay agent did not add option 82 to, e.g., a DHCP
   request without the magic cookie, were relayed with a length of 0
 - dhcprelayd exited with status 0 when the configuration file was
-  invalid, at startup or on SIGHUP, now it exits with status 1
+  invalid at startup, now it exits with status 1
+- An invalid configuration file on SIGHUP stopped the relay agent, now
+  it is rejected and the relay agent keeps running with the old one
 
 [v2.1][] - 2018-06-11
 ---------------------
