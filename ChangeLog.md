@@ -29,6 +29,8 @@ All notable changes to the project are documented in this file.
   options
 - Replies to clients were sent with trailing garbage, as many bytes as
   the option 82 that was removed from them
+- Requests the relay agent did not add option 82 to, e.g., a DHCP
+  request without the magic cookie, were relayed with a length of 0
 - Fix signed/unsigned comparison warning in the configuration parser
 
 [v2.1][] - 2018-06-11
