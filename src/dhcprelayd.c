@@ -402,6 +402,8 @@ static void cleanup(struct ev_loop *loop)
 	conf_free(cfg);
 }
 
+static int status;
+
 static struct ev_loop *init(struct ev_loop *loop, char *fname)
 {
 	cfg_t *cfg = ev_userdata(loop);
@@ -409,7 +411,7 @@ static struct ev_loop *init(struct ev_loop *loop, char *fname)
 	/* Clear all old settings. */
 	cleanup(loop);
 	if (!cfg || conf_read(cfg, fname)) {
-		syslog2(LOG_ERR, "Failed reading configuration file, %s: %m", fname);
+		syslog2(LOG_ERR, "Failed reading configuration file %s", fname);
 		ev_break(loop, EVBREAK_ALL);
 		return NULL;
 	}
@@ -426,6 +428,7 @@ static struct ev_loop *init(struct ev_loop *loop, char *fname)
 		ev_break(loop, EVBREAK_ALL);
 		return NULL;
 	}
+
 	return loop;
 }
 
@@ -433,7 +436,8 @@ static void sigcb(struct ev_loop *loop, ev_signal *w, int rev __attribute__ ((un
 {
 	switch (w->signum) {
 	case SIGHUP:
-		init(loop, config_file);
+		if (!init(loop, config_file))
+			status = 1;
 		break;
 
 	default:
@@ -520,10 +524,12 @@ int main(int argc, char **argv)
 
 	if (loop)
 		ev_run(loop, 0);
+	else
+		status = 1;
 
 	conf_free(&cfg);
 	close(sd_out);
 	close(sd_separate_in);
 
-	return 0;
+	return status;
 }

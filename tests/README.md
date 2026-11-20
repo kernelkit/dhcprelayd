@@ -93,6 +93,13 @@ and each request reaches the server exactly once.
 
 Topology: routed
 
+### invalid
+
+An invalid configuration makes the relay agent exit with status 1 at
+startup.
+
+Topology: routed
+
 ### length
 
 A request is relayed with the same UDP length as the client sent it,

@@ -31,6 +31,8 @@ All notable changes to the project are documented in this file.
   the option 82 that was removed from them
 - Requests the relay agent did not add option 82 to, e.g., a DHCP
   request without the magic cookie, were relayed with a length of 0
+- dhcprelayd exited with status 0 when the configuration file was
+  invalid, at startup or on SIGHUP, now it exits with status 1
 - Fix signed/unsigned comparison warning in the configuration parser
 
 [v2.1][] - 2018-06-11
