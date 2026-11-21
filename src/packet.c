@@ -35,8 +35,6 @@
 #include "queue.h"
 #include "misc.h"
 
-int send_sd;
-
 union {
 	struct cmsghdr align;	/* this ensures alignment */
 	char control[CMSG_SPACE(sizeof(struct in_pktinfo))];
@@ -144,7 +142,7 @@ static int handle_request(conf_t *cfg, struct dhcp_packet *packet, int ifindex, 
 			saddr.sin_addr.s_addr = server->addr;
 			saddr.sin_port = htons(server->port);
 			syslog2(LOG_DEBUG, "Forward request to %s!", inet_ntoa(saddr.sin_addr));
-			while (sendto(send_sd, packet, sz, 0, (struct sockaddr *)&saddr, sizeof(saddr)) == -1 && errno == EINTR) ;
+			while (sendto(group->sd, packet, sz, 0, (struct sockaddr *)&saddr, sizeof(saddr)) == -1 && errno == EINTR) ;
 		}
 	} else {
 		TAILQ_FOREACH(server, &cfg->server_list, link) {
@@ -152,7 +150,7 @@ static int handle_request(conf_t *cfg, struct dhcp_packet *packet, int ifindex, 
 			saddr.sin_addr.s_addr = server->addr;
 			saddr.sin_port = htons(server->port);
 			syslog2(LOG_DEBUG, "Forward request to %s!", inet_ntoa(saddr.sin_addr));
-			while (sendto(send_sd, packet, sz, 0, (struct sockaddr *)&saddr, sizeof(saddr)) == -1 && errno == EINTR) ;
+			while (sendto(group->sd, packet, sz, 0, (struct sockaddr *)&saddr, sizeof(saddr)) == -1 && errno == EINTR) ;
 		}
 	}
 	if (add_fdb_entry(ifindex, packet->chaddr))
@@ -161,7 +159,7 @@ static int handle_request(conf_t *cfg, struct dhcp_packet *packet, int ifindex, 
 	return 0;
 }
 
-int handle_reply(conf_t *cfg, struct dhcp_packet *packet, int ifindex, ssize_t sz)
+int handle_reply(conf_t *cfg, struct dhcp_packet *packet, int ifindex, ssize_t sz, int sd)
 {
 	struct msghdr msg;
 	struct iovec iov;
@@ -228,7 +226,7 @@ int handle_reply(conf_t *cfg, struct dhcp_packet *packet, int ifindex, ssize_t s
 		return 1;
 
 	do {
-		result = sendmsg(send_sd, &msg, 0);
+		result = sendmsg(group ? group->sd : sd, &msg, 0);
 		if (result < 0)
 			syslog2(LOG_WARNING, "Sending error: %m");
 	} while (result == -1 && errno == EINTR);
@@ -236,9 +234,8 @@ int handle_reply(conf_t *cfg, struct dhcp_packet *packet, int ifindex, ssize_t s
 	return 0;
 }
 
-int handle_packet(conf_t *cfg, struct dhcp_packet *packet, ssize_t sz, int ifindex, int sd_out)
+int handle_packet(conf_t *cfg, struct dhcp_packet *packet, ssize_t sz, int ifindex, int sd)
 {
-	send_sd = sd_out;
 	/* rfc1542 says discard if > 16 */
 	if ((packet->hops++) > 16)
 		return 1;
@@ -249,7 +246,7 @@ int handle_packet(conf_t *cfg, struct dhcp_packet *packet, ssize_t sz, int ifind
 	if (packet->op == BOOTREQUEST)
 		handle_request(cfg, packet, ifindex, sz);
 	else if (packet->op == BOOTREPLY)
-		handle_reply(cfg, packet, ifindex, sz);
+		handle_reply(cfg, packet, ifindex, sz, sd);
 
 	return 0;
 }

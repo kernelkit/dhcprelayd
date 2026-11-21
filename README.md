@@ -114,7 +114,8 @@ filtering bridge.  The settings are summarized below, the full reference
 is the dhcprelayd.conf(5) man page.
 
 **server ADDRESS { }** - DHCP server to relay requests to, at least one,
-here or in each interface.  Requests are sent to all servers.
+here or in each interface.  Requests are sent to all servers.  A DHCP
+server on the same system is reached at 127.0.0.1, see below.
   * **port** - UDP port of the server, default 67
 
 **force-server-identity** - add the server identifier override
@@ -160,6 +161,33 @@ bytes.
 
 A text value with spaces, or with one of `#={}(),+` in it, must be
 quoted, e.g. `circuit-id = "cabinet 3"`.
+
+
+Server on the same system
+-------------------------
+
+The DHCP server can run on the relay agent itself, so the addresses per
+port are set up in the server's own configuration.  dhcprelayd binds
+UDP port 67 only on its gateway addresses, which leaves `0.0.0.0:67` to
+the server.  The server must allow that second socket, for dnsmasq
+start it with `--bind-dynamic` or `--bind-interfaces`.  Relay requests
+to the server at 127.0.0.1:
+
+```
+server 127.0.0.1 {}
+option82 {}
+interface vlan1 {
+    port eth0 {}
+    port eth6 {}
+}
+```
+
+and give each port its address in dnsmasq:
+
+```
+dhcp-circuitid=set:eth0,eth0
+dhcp-host=tag:eth0,*:*:*:*:*:*,192.168.1.10
+```
 
 
 Origin & References

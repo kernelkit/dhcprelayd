@@ -48,6 +48,8 @@ typedef struct conf_group_t {
 	struct server_list server_list;
 	unsigned int ifindex;
 	int giaddr;
+	ev_io io;
+	int sd;			/* UDP socket bound to giaddr, in io */
 } conf_group_t;
 
 typedef struct conf_server_t {

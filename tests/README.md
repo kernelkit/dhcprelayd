@@ -123,6 +123,15 @@ when no option 82 is added.
 
 Topology: routed
 
+### local
+
+A DHCP server on the same system: dnsmasq runs in the relay agent's
+namespace with `--bind-dynamic` and is reached at `127.0.0.1`.  The
+clients on ports `c1` and `c2` each get the static address the server
+has for their port.
+
+Topology: bridged
+
 ### option82
 
 With option 82 enabled on a routed interface, the client gets the

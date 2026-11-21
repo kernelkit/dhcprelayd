@@ -26,6 +26,10 @@ All notable changes to the project are documented in this file.
   the client's option and adds the relay agent's own.  Previously a
   second option 82 was added, and a client could pick its own
   circuit-id
+- The DHCP server can run on the same system as the relay agent, e.g.
+  for addresses per port set up in dnsmasq.  The relay agent binds UDP
+  port 67 only on its gateway addresses, and reaches the server at
+  127.0.0.1.  dnsmasq needs `--bind-dynamic` or `--bind-interfaces`
 
 ### Fixes
 - Requests on a routed interface were relayed twice, so the server got

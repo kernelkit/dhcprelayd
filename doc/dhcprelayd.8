@@ -57,6 +57,17 @@ of the
 .B bridge filter
 table, and are removed when the relay agent stops.
 .PP
+The relay agent binds UDP port 67 only on its gateway addresses, so a
+DHCP server can run on the same system.  The server must allow a second
+socket on port 67, with
+.B \-\-bind\-dynamic
+or
+.B \-\-bind\-interfaces
+for
+.BR dnsmasq (8),
+and the relay agent reaches it at 127.0.0.1, see
+.BR dhcprelayd.conf (5).
+.PP
 The configuration file is described in
 .BR dhcprelayd.conf (5).
 .SH OPTIONS

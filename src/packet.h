@@ -62,6 +62,6 @@ typedef struct client_cache_t {
 	int ifindex;
 } client_cache_t;
 
-int handle_packet(conf_t *cfg, struct dhcp_packet *packet, ssize_t sz, int ifindex, int sd_out);
+int handle_packet(conf_t *cfg, struct dhcp_packet *packet, ssize_t sz, int ifindex, int sd);
 
 #endif

@@ -423,6 +423,41 @@ static int read_interfaces(cfg_t *cfg, conf_t *conf)
 	return rc;
 }
 
+/* A request to a gateway address would reach our own socket for replies */
+static int is_giaddr(conf_t *conf, struct server_list *list)
+{
+	conf_server_t *server;
+	conf_group_t *group;
+
+	TAILQ_FOREACH(server, list, link) {
+		TAILQ_FOREACH(group, &conf->group_list, link) {
+			struct in_addr ina = { .s_addr = server->addr };
+
+			if (server->addr != group->giaddr)
+				continue;
+			syslog2(LOG_ERR, "Server %s is the gateway address of an interface, use 127.0.0.1",
+				inet_ntoa(ina));
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
+static int check_servers(conf_t *conf)
+{
+	conf_group_t *group;
+
+	if (is_giaddr(conf, &conf->server_list))
+		return 1;
+	TAILQ_FOREACH(group, &conf->group_list, link) {
+		if (is_giaddr(conf, &group->server_list))
+			return 1;
+	}
+
+	return 0;
+}
+
 conf_t *conf_read(const char *file)
 {
 	conf_t *conf;
@@ -469,7 +504,7 @@ conf_t *conf_read(const char *file)
 	conf->udp_listen_port = cfg_getint(cfg, "udp-listen-port");
 	read_option82(cfg, conf);
 
-	if (read_servers(cfg, &conf->server_list) || read_interfaces(cfg, conf))
+	if (read_servers(cfg, &conf->server_list) || read_interfaces(cfg, conf) || check_servers(conf))
 		goto done;
 
 	rc = 0;

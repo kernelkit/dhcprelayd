@@ -33,5 +33,6 @@ invalid 'server 20.0.0.2 {}'
 invalid 'interface c1 {}'
 invalid 'interface c1 { giaddr = 10.0.0.256 server 20.0.0.2 {} }'
 invalid 'server 20.0.0.2 {} interface c1 {} bogus = 1'
+invalid 'server 10.0.0.1 {} interface c1 {}'
 
 OK

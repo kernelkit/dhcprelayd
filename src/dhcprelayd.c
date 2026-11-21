@@ -37,7 +37,6 @@
 #include "config.h"
 #include "misc.h"
 
-static int sd_out = 0;
 static int sd_separate_in = 0;
 
 static ev_signal sighup_watcher;
@@ -45,7 +44,6 @@ static ev_signal sigint_watcher;
 static ev_signal sigquit_watcher;
 static ev_signal sigterm_watcher;
 
-static ev_io io_upstreams;
 static ev_io io_upstreams_separate_listen;
 
 static char config_file[128] = "/etc/dhcprelayd.conf";
@@ -169,7 +167,7 @@ static void packet_cb_raw(struct ev_loop *loop __attribute__ ((unused)), ev_io *
 	/* Replies are read from the UDP socket */
 	packet = packet_rcv_raw(w->fd, buf, sizeof(buf), &len, &ifindex);
 	if (packet && packet->header.op == BOOTREQUEST)
-		handle_packet(cfg, &packet->header, len, ifindex, sd_out);
+		handle_packet(cfg, &packet->header, len, ifindex, -1);
 
 	ev_io_start(loop, w);
 }
@@ -186,7 +184,7 @@ static void udp_recv(struct ev_loop *loop, ev_io *w, int replies_only)
 
 	packet = packet_rcv_udp(w->fd, buf, sizeof(buf), &len, &ifindex);
 	if (packet && (!replies_only || packet->header.op == BOOTREPLY))
-		handle_packet(cfg, &packet->header, len, ifindex, sd_out);
+		handle_packet(cfg, &packet->header, len, ifindex, w->fd);
 	ev_io_start(loop, w);
 }
 
@@ -280,9 +278,7 @@ static int setup_socket_udp_separate_listen(struct ev_loop *loop, conf_t *cfg)
 	if (sd_separate_in > 0)
 		return 0;
 
-	/* If default port we only need to use one socket for send and receive,
-	 * at this point that has already been created (sd_out), so we just
-	 * return */
+	/* Port 67 is already read by the per interface sockets */
 	if (udp_listen_port == DHCP_SERVER_PORT)
 		return 0;
 
@@ -322,44 +318,42 @@ static int setup_socket_udp_separate_listen(struct ev_loop *loop, conf_t *cfg)
 	return 0;
 }
 
-/*
- * Setup socket for listening to packets form server and to be used 
- * for sending replies to clients.
- */
-static int setup_socket_udp(struct ev_loop *loop)
+/* Bound to giaddr, leaves 0.0.0.0:67 to a DHCP server on the same system */
+static int setup_sockets_udp(struct ev_loop *loop, conf_t *cfg)
 {
+	conf_group_t *group;
 	int oneopt = 1;
 
-	if (sd_out > 0)
-		return 0;
+	TAILQ_FOREACH(group, &cfg->group_list, link) {
+		struct sockaddr_in saddr = {
+			.sin_family = AF_INET,
+			.sin_port = htons(DHCP_SERVER_PORT),
+			.sin_addr.s_addr = group->giaddr,
+		};
 
-	sd_out = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, IPPROTO_UDP);
-	if (sd_out == -1) {
-		perror("Unable to create out socket");
-		return 1;
+		group->sd = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, IPPROTO_UDP);
+		if (group->sd == -1) {
+			syslog2(LOG_ERR, "Failed creating UDP socket: %m");
+			return 1;
+		}
+
+		if (setsockopt(group->sd, SOL_IP, IP_PKTINFO, &oneopt, sizeof(oneopt)) ||
+		    setsockopt(group->sd, SOL_IP, IP_FREEBIND, &oneopt, sizeof(oneopt)) ||
+		    setsockopt(group->sd, SOL_SOCKET, SO_BROADCAST, &oneopt, sizeof(oneopt)) ||
+		    setsockopt(group->sd, SOL_SOCKET, SO_REUSEADDR, &oneopt, sizeof(oneopt))) {
+			syslog2(LOG_ERR, "Failed setting UDP socket options: %m");
+			return 1;
+		}
+
+		if (bind(group->sd, (struct sockaddr *)&saddr, sizeof(saddr))) {
+			syslog2(LOG_ERR, "Failed binding to %s:%d: %m",
+				inet_ntoa(saddr.sin_addr), DHCP_SERVER_PORT);
+			return 1;
+		}
+
+		ev_io_init(&group->io, packet_cb_upstream, group->sd, EV_READ);
+		ev_io_start(loop, &group->io);
 	}
-	if (setsockopt(sd_out, SOL_IP, IP_PKTINFO, &oneopt, sizeof(oneopt)) == -1 ||
-	    setsockopt(sd_out, SOL_SOCKET, SO_BROADCAST, &oneopt, sizeof(oneopt)) == -1) {
-		perror("Unable to set socket option, SO_BROADCAST");
-		close(sd_out);
-		return 1;
-	}
-
-	struct sockaddr_in saddr;
-
-	memset(&saddr, 0, sizeof(saddr));
-
-	saddr.sin_family = AF_INET;
-	saddr.sin_port = htons(DHCP_SERVER_PORT);
-	saddr.sin_addr.s_addr = INADDR_ANY;
-	if (bind(sd_out, (struct sockaddr *)&saddr, sizeof(struct sockaddr_in))) {
-		perror(PACKAGE_NAME ": cannot bind DHCP high level socket");
-		return -1;
-	}
-
-	ev_io_init(&io_upstreams, packet_cb_upstream, sd_out, EV_READ);
-	ev_io_start(loop, &io_upstreams);
-
 
 	return 0;
 }
@@ -374,6 +368,12 @@ static void cleanup(struct ev_loop *loop)
 
 	TAILQ_FOREACH(group, &cfg->group_list, link) {
 		conf_iface_t *iface;
+
+		if (group->sd > 0) {
+			ev_io_stop(loop, &group->io);
+			close(group->sd);
+			group->sd = 0;
+		}
 
 		TAILQ_FOREACH(iface, &group->iface_list, link) {
 			char ifname[IFNAMSIZ];
@@ -408,7 +408,7 @@ static int init(struct ev_loop *loop, conf_t *cfg)
 	cleanup(loop);
 	ev_set_userdata(loop, cfg);
 
-	if (setup_sockets_raw(loop, cfg) || setup_socket_udp(loop) ||
+	if (setup_sockets_raw(loop, cfg) || setup_sockets_udp(loop, cfg) ||
 	    setup_socket_udp_separate_listen(loop, cfg)) {
 		syslog2(LOG_ERR, "Failed setting up required sockets.");
 		return 1;
@@ -528,8 +528,6 @@ int main(int argc, char **argv)
 		ev_run(loop, 0);
 
 	cleanup(loop);
-	close(sd_out);
-	close(sd_separate_in);
 
 	return status;
 }
