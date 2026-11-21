@@ -1,0 +1,199 @@
+.TH DHCPRELAYD.CONF 5 "November 2026" "dhcprelayd" "File Formats Manual"
+.SH NAME
+dhcprelayd.conf \- configuration file for the dhcprelayd DHCP relay agent
+.SH SYNOPSIS
+.I /etc/dhcprelayd.conf
+.SH DESCRIPTION
+.BR dhcprelayd (8)
+reads its configuration from this file at startup and on SIGHUP.  The
+file has
+.B key = value
+settings, and sections with a keyword, a name, and a body in braces:
+.PP
+.RS
+.nf
+server 192.168.2.1 {
+    port = 1067
+}
+.fi
+.RE
+.PP
+An empty section is written
+.BR {} .
+Comments start with
+.BR # .
+A text value with spaces, or with one of
+.B #={}(),+
+in it, must be quoted, e.g.
+.BR "circuit-id = \(dqcabinet 3\(dq" .
+.PP
+The file is checked when it is read.  An error, e.g. an unknown setting
+or an invalid address, is logged with the file name and line number, and
+the file is rejected.
+.SH GLOBAL SETTINGS
+.TP
+.BI server " address " { " ... " }
+A DHCP server to relay requests to.  Requests are sent to all servers.
+At least one server is required, here or in each
+.B interface
+section.
+.RS
+.TP
+.BI port " = port"
+UDP port of the server, default 67.
+.RE
+.TP
+.BI force-server-identity " = true" \fR|\fB false
+Add the server identifier override sub-option from RFC 5107 to option 82,
+with the gateway address.  The server then gives the gateway address as
+its server identifier, so clients send their renewals to the relay agent
+instead of to the server directly.  The server must support the
+sub-option.  Takes effect only with an
+.B option82
+section.  Default false.
+.TP
+.BI udp-listen-port " = port"
+Also receive requests and server replies on this UDP port, e.g. from
+relay agents or servers that use a port other than 67.  Default 67, no
+extra port.
+.TP
+.BR option82 " { " ... " }"
+Add the relay agent information option, option 82, to each request, and
+remove it from replies.  Without this section the option is not added.
+.RS
+.TP
+.BI policy " = " replace \fR|\fB keep \fR|\fB drop
+What to do with a request from a client that already carries option 82.
+A client should never send it, it is meant to be added by a relay agent.
+.RS
+.TP
+.B replace
+Remove the client's option 82 and add the relay agent's own, so a client
+cannot pick its own circuit-id.  The default.
+.TP
+.B keep
+Forward the request with the client's option 82, e.g. from a trusted
+device that adds its own.
+.TP
+.B drop
+Discard the request.
+.RE
+.TP
+.BI remote-id-type " = " hostname \fR|\fB giaddr
+Use the hostname, the default, or the gateway address of the interface
+as text, as remote-id.
+.TP
+.BI remote-id " = text"
+Use a fixed text as remote-id.
+.TP
+.BI remote-id-hex " = xx:xx:..."
+Use fixed bytes as remote-id, see
+.BR "HEX VALUES" .
+.PP
+Set at most one of
+.BR remote-id-type ,
+.BR remote-id ,
+and
+.BR remote-id-hex .
+.RE
+.TP
+.BI interface " name " { " ... " }
+Relay requests received on this interface.  At least one is required.
+The interface must exist when the file is read.
+.RS
+.TP
+.BI giaddr " = " auto \fR|\fI address
+Gateway address, sent to the server and used by the server to select the
+subnet.  An IPv4 address, or
+.BR auto ,
+the default, for the first IPv4 address of the interface.
+.TP
+.BI server " address " { " ... " }
+Servers for this interface, same syntax as the global
+.BR server .
+They replace the global servers for this interface.
+.TP
+.BI port " name " { " ... " }
+A bridge port to relay requests from, when the interface is a bridge.
+Only the listed ports are relayed from.  Without
+.B port
+sections, requests are relayed from the interface itself.
+.RS
+.TP
+.BI circuit-id " = text"
+Circuit-id in option 82, default the name of the port.
+.TP
+.BI circuit-id-hex " = xx:xx:..."
+Circuit-id as bytes, see
+.BR "HEX VALUES" .
+.PP
+Set
+.B circuit-id
+or
+.BR circuit-id-hex ,
+not both.
+.RE
+.RE
+.SH HEX VALUES
+The
+.B -hex
+settings take colon separated pairs of hex digits, e.g.
+.BR c0:ff:ee ,
+for values that are not text, including NUL bytes.  Text and hex values
+are 1 to 50 bytes.
+.SH EXAMPLES
+Relay requests on
+.B eth1
+to the DHCP server at 198.19.10.2, with the first IPv4 address of
+.B eth1
+as gateway address:
+.PP
+.RS
+.nf
+server 198.19.10.2 {}
+
+interface eth1 {}
+.fi
+.RE
+.PP
+IP address per port on a VLAN filtering bridge.  Requests from bridge
+ports eth0 and eth6 in VLAN 1 are relayed to 192.168.100.2, and requests
+from eth3 in VLAN 2 to the global server, with option 82:
+.PP
+.RS
+.nf
+server 192.168.2.1 {}
+
+option82 {
+    remote-id = switch10
+}
+
+interface vlan1 {
+    giaddr = 192.168.1.6
+    server 192.168.100.2 {}
+    port eth0 {}
+    port eth6 {
+        circuit-id = cabinet-3
+    }
+}
+
+interface vlan2 {
+    port eth3 {
+        circuit-id-hex = 00:03
+    }
+}
+.fi
+.RE
+.SH FILES
+.TP
+.I /etc/dhcprelayd.conf
+Default configuration file, another file is given with
+.B \-f
+to
+.BR dhcprelayd (8).
+.SH SEE ALSO
+.BR dhcprelayd (8)
+.PP
+RFC 3046, DHCP Relay Agent Information Option.
+.br
+RFC 5107, DHCP Server Identifier Override Suboption.

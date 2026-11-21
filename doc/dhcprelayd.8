@@ -1,43 +1,110 @@
-.TH DHCPRELAYD 8
+.TH DHCPRELAYD 8 "November 2026" "dhcprelayd" "System Manager's Manual"
 .SH NAME
-dhcprelayd \- DHCP/BOOTP relay agent with Option 82 support
+dhcprelayd \- DHCP relay agent with option 82 support
 .SH SYNOPSIS
 .B dhcprelayd
-.I [OPTION]...
-.SH "DESCRIPTION"
-.BR dhcprelayd
-is a DHCP and BOOTP relay agent. It listens for DHCP and BOOTP broadcasts on directly connected
-subnets and relays them to DHCP or BOOTP servers elsewhere. It also relays replies from the remote
-servers back to partially configured hosts. Once hosts are fully configured they can communicate
-directly with their servers and no longer need the services of a relay.
-
+.RB [ \-dhv ]
+.RB [ \-f
+.IR file ]
+.SH DESCRIPTION
+.B dhcprelayd
+is a DHCP and BOOTP relay agent.  It picks up requests that clients
+broadcast on a local network and relays them as unicast to one or more
+DHCP servers on another network.  It relays the replies back to the
+clients.
+.PP
+The relay agent can run on a routed interface, but it is mainly made for
+a switch: a VLAN filtering bridge where each bridge port connects to one
+client.  For each request it
+.IP \(bu 3
+sets the gateway address,
+.IR giaddr ,
+to its address on the client network, the server uses it to select the
+subnet and sends its reply to it,
+.IP \(bu
+adds the relay agent information option, option 82 from RFC 3046, with
+the
+.I circuit-id
+of the port the request came in on and the
+.I remote-id
+of the relay agent, if enabled,
+.IP \(bu
+sends the request to all servers configured for the interface.
+.PP
+For each reply it removes option 82, adds an FDB entry for the client on
+the port the request came in on, and an ARP entry for the offered
+address, and sends the reply to the client.  The FDB entry is for switch
+cores that do not learn from frames trapped to the CPU.
+.PP
+Requests already relayed by another relay agent, with
+.I giaddr
+set, are forwarded unchanged.  Requests with one of the relay agent's
+own gateway addresses in
+.I giaddr
+are dropped.
+.PP
+On a bridge,
+.B dhcprelayd
+installs
+.BR nft (8)
+rules that drop DHCP requests from the configured bridge ports, so the
+bridge does not flood them to the other ports.  The rules are in the
+chains
+.B dhcpr-input
+and
+.B dhcpr-forward
+of the
+.B bridge filter
+table, and are removed when the relay agent stops.
+.PP
+The configuration file is described in
+.BR dhcprelayd.conf (5).
 .SH OPTIONS
-dhcprelayd requires a configuration file to operate correctly.  The
-default is
-.IR /etc/dhcprelayd.conf ,
-use the
-.B \-f
-option to specify another file.
 .TP
-.B \-f <file>
-Specify the configuration file to be used.
+.BI \-f " file"
+Read the configuration from
+.IR file ,
+default
+.IR /etc/dhcprelayd.conf .
 .TP
 .B \-d
-Log all levels to stdout, used for debugging.
+Log all levels to stdout instead of syslog, for debugging.
 .TP
 .B \-v
-Report the software release version.
+Show the version and exit.
 .TP
 .B \-h
-Show usage.
-.SH NOTES
-When running with a bridge, nftables is required.
-.SH AUTHOR
-Maintained by the KernelKit project, https://github.com/kernelkit/dhcprelayd
+Show usage and exit.
+.SH SIGNALS
+.TP
+.B SIGHUP
+Read the configuration file again.  If the new file is invalid, the
+error is logged and the relay agent keeps running with the old
+configuration.
+.TP
+.BR SIGTERM ", " SIGINT ", " SIGQUIT
+Remove the nftables rules and exit.
+.SH FILES
+.TP
+.I /etc/dhcprelayd.conf
+Default configuration file.
+.SH EXIT STATUS
+.B dhcprelayd
+exits 0 when stopped by a signal, and 1 when the configuration file is
+missing or invalid at startup, or when it fails to set up its sockets.
+.SH SEE ALSO
+.BR dhcprelayd.conf (5),
+.BR nft (8),
+.BR dnsmasq (8)
+.PP
+RFC 3046, DHCP Relay Agent Information Option.
 .br
-Option 82 and bridge support by Jonas Johansson, Mattias Walström and
-Thomas Eliassson at Westermo.
-.br
-Original dhcp-helper by Simon Kelley.
-
-
+RFC 5107, DHCP Server Identifier Override Suboption.
+.SH AUTHORS
+Maintained by the KernelKit project,
+.UR https://github.com/kernelkit/dhcprelayd
+.UE .
+.PP
+Option 82 and bridge support by Jonas Johansson, Mattias Walstr\(:om
+and Thomas Eliassson at Westermo.  Original dhcp-helper by Simon
+Kelley.

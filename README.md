@@ -110,7 +110,8 @@ The file is in [libConfuse][] format: `key = value` settings, and
 sections with a name and a body in braces.  Comments start with `#`.
 See [simple.conf](examples/simple.conf) for a routed interface, and
 [bridged.conf](examples/bridged.conf) for IP address per port on a VLAN
-filtering bridge.
+filtering bridge.  The settings are summarized below, the full reference
+is the dhcprelayd.conf(5) man page.
 
 **server ADDRESS { }** - DHCP server to relay requests to, at least one,
 here or in each interface.  Requests are sent to all servers.

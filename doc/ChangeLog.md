@@ -15,8 +15,8 @@ All notable changes to the project are documented in this file.
   libConfuse, replaces the JSON format.  Each interface to relay from is
   an `interface` section, with its bridge ports as `port` sections.
   Binary circuit-id and remote-id values are set as colon separated hex
-  with `circuit-id-hex` and `remote-id-hex`.  See the README and the
-  `examples/` directory
+  with `circuit-id-hex` and `remote-id-hex`.  See the new
+  dhcprelayd.conf(5) man page and the `examples/` directory
 - Depends only on libev and libConfuse, no longer on libnl and jansson
 - New test suite, runs unprivileged in network namespaces, replaces the
   Python 2 tests.  See `tests/README.md` for host requirements

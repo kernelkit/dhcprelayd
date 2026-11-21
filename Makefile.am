@@ -6,6 +6,7 @@ doc_DATA            = README.md doc/ChangeLog.md
 EXTRA_DIST          = README.md doc/ChangeLog.md doc/AUTHORS \
                       doc/option82.svg doc/packet-flow.svg doc/use-case.svg \
                       examples/simple.conf examples/bridged.conf
+dist_man5_MANS      = doc/dhcprelayd.conf.5
 dist_man8_MANS      = doc/dhcprelayd.8
 dist_noinst_SCRIPTS = autogen.sh
 
