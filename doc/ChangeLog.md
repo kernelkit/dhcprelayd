@@ -40,6 +40,8 @@ All notable changes to the project are documented in this file.
   invalid at startup, now it exits with status 1
 - An invalid configuration file on SIGHUP stopped the relay agent, now
   it is rejected and the relay agent keeps running with the old one
+- With `remote-id-type giaddr` the remote-id was `0.0.0.0`, unless
+  `force-server-identity` was also set
 
 [v2.1][] - 2018-06-11
 ---------------------

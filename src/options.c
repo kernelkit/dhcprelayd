@@ -252,7 +252,7 @@ static void add_option82(struct dhcp_packet_with_opts *mess, unsigned char *end,
 	opt_cid.flags = 0;
 	opt_cid.next = &opt_rid;
 
-	if (addr.s_addr) {
+	if (cfg->force_server_id) {
 		opt_sor.opt = SUBOPT_SERVER_OR;
 		opt_sor.val = (unsigned char *)&addr;
 		opt_sor.len = 4;
@@ -318,10 +318,6 @@ size_t add_options(struct dhcp_packet_with_opts *mess, size_t sz, int ifindex, s
 	tmp = option_find(mess, sz, OPTION_END, 0);
 	nbytes = end - tmp;
 	memset(tmp, 0, nbytes);
-
-	/* If not forcing server id, reset address */
-	if (!cfg->force_server_id)
-		memset(&addr, 0, sizeof(addr));
 
 	/* Option 82 should always be added last */
 	add_option82(mess, end, ifindex, cfg, iface, addr);

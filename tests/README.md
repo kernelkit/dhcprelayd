@@ -93,6 +93,13 @@ and each request reaches the server exactly once.
 
 Topology: routed
 
+### giaddr
+
+With `remote-id-type giaddr`, the client gets the static address the
+server has for remote-id `10.0.0.1`, the gateway address of `c1`.
+
+Topology: routed
+
 ### hex
 
 A binary circuit-id and remote-id, set with `circuit-id-hex` and
