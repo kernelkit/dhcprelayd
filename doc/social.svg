@@ -470,7 +470,7 @@
   <text x="100" y="330" font-size="34" font-weight="600" fill="#e6edf3">DHCP relay agent</text>
   <text x="100" y="374" font-size="34" font-weight="600" fill="#e6edf3">with option 82</text>
   <rect x="100" y="414" width="128" height="40" rx="20" fill="#1f6feb"/>
-  <text x="164" y="441" font-size="20" font-weight="700" fill="#ffffff" text-anchor="middle">v2.2</text>
+  <text x="164" y="441" font-size="20" font-weight="700" fill="#ffffff" text-anchor="middle">v3.0</text>
   <text x="248" y="441" font-size="20" fill="#8b949e">IP address per port</text>
   <text x="100" y="560" font-size="22" fill="#8b949e">github.com/kernelkit/dhcprelayd</text>
   <defs><marker id="aq" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#58a6ff"/></marker><marker id="as" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#f0883e"/></marker></defs>
