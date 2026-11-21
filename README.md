@@ -117,10 +117,11 @@ is the dhcprelayd.conf(5) man page.
 here or in each interface.  Requests are sent to all servers.
   * **port** - UDP port of the server, default 67
 
-**force-server-identity** - replace the server identifier (option 54) in
-replies with the gateway address, so renewals are also relayed, for
-servers without support for the server identifier override sub-option.
-Default false.
+**force-server-identity** - add the server identifier override
+sub-option from RFC 5107 to option 82, with the gateway address, so
+clients also send their renewals through the relay agent.  The server
+must support the sub-option.  Needs the `option82` section.  Default
+false.
 
 **udp-listen-port** - also receive requests and server replies on this
 UDP port, e.g. from servers or relay agents that use a port other than
