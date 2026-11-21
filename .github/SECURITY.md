@@ -36,4 +36,4 @@ Only list the interfaces that need a relay agent in the configuration.
 
 
 [advisories]: https://github.com/kernelkit/dhcprelayd/security
-[ChangeLog]:  https://github.com/kernelkit/dhcprelayd/blob/main/ChangeLog.md
+[ChangeLog]:  https://github.com/kernelkit/dhcprelayd/blob/main/doc/ChangeLog.md

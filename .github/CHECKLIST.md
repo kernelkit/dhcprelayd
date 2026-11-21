@@ -14,7 +14,7 @@ Before Tagging
 --------------
 
  - [ ] `main` is green in [Bob the Builder][]
- - [ ] `ChangeLog.md`: turn `[vX.Y][UNRELEASED]` into `[vX.Y][] -
+ - [ ] `doc/ChangeLog.md`: turn `[vX.Y][UNRELEASED]` into `[vX.Y][] -
        YYYY-MM-DD` with the Changes and Fixes for *this* release, and
        replace the `[UNRELEASED]` link at the bottom with
        `[vX.Y]: .../compare/vX.Y-1...vX.Y`
@@ -40,7 +40,7 @@ Tag and Push
 
 Pushing the tag starts [Release General].  It checks that the tag
 matches the version in `configure.ac`, runs `make distcheck`, and
-publishes the tarball and its `.md5` with the top `ChangeLog.md` section
+publishes the tarball and its `.md5` with the top `doc/ChangeLog.md` section
 as release notes.  Tags ending in `-alphaN`, `-betaN` or `-rcN` are
 published as pre-releases and are not marked latest.
 
@@ -53,7 +53,7 @@ Start the Next Cycle
 Right after a release, so `main` never sits on a released version:
 
  - [ ] `configure.ac`: set the version to the next `X.Y-pre`
- - [ ] `ChangeLog.md`: open a `[vX.Y][UNRELEASED]` section and point
+ - [ ] `doc/ChangeLog.md`: open a `[vX.Y][UNRELEASED]` section and point
        `[UNRELEASED]` at `compare/vX.Y-1...HEAD`
 
 

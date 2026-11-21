@@ -2,11 +2,11 @@ SUBDIRS = src tests
 AUTOMAKE_OPTIONS = subdir-objects
 ACLOCAL_AMFLAGS = ${ACLOCAL_FLAGS}
 
-doc_DATA            = README.md ChangeLog.md
-EXTRA_DIST          = README.md ChangeLog.md doc/option82.svg \
-                      examples/simple.conf examples/bridged.conf \
-                      doc/packet-flow.svg doc/use-case.svg
-dist_man8_MANS      = dhcprelayd.8
+doc_DATA            = README.md doc/ChangeLog.md
+EXTRA_DIST          = README.md doc/ChangeLog.md doc/AUTHORS \
+                      doc/option82.svg doc/packet-flow.svg doc/use-case.svg \
+                      examples/simple.conf examples/bridged.conf
+dist_man8_MANS      = doc/dhcprelayd.8
 dist_noinst_SCRIPTS = autogen.sh
 
 # Generate MD5 checksum file

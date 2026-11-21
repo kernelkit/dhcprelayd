@@ -11,7 +11,7 @@ body:
       value: |
         **Thank :heart: you for taking the time to fill out this feature request!**
 
-        We kindly ask that you search to see if an issue [already exists](https://github.com/kernelkit/dhcprelayd/issues?q=is%3Aissue+sort%3Acreated-desc+) for your feature, and to check [TODO.md](https://github.com/kernelkit/dhcprelayd/blob/main/TODO.md).  We are also happy to accept contributions from our users. For details see [CONTRIBUTING](https://github.com/kernelkit/dhcprelayd/blob/main/.github/CONTRIBUTING.md).
+        We kindly ask that you search to see if an issue [already exists](https://github.com/kernelkit/dhcprelayd/issues?q=is%3Aissue+sort%3Acreated-desc+) for your feature, and to check [doc/TODO.md](https://github.com/kernelkit/dhcprelayd/blob/main/doc/TODO.md).  We are also happy to accept contributions from our users. For details see [CONTRIBUTING](https://github.com/kernelkit/dhcprelayd/blob/main/.github/CONTRIBUTING.md).
 
   - type: textarea
     attributes:

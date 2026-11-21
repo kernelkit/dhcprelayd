@@ -12,7 +12,7 @@ If you are unsure how to start implementing an idea or fix:
 - :bug: open an issue, there are templates for _bugs_ and _feature
   requests_ at <https://github.com/kernelkit/dhcprelayd/issues>
 - :speech_balloon: use the [Discussions][discuss] forum
-- :memo: check [TODO.md][todo], it lists known bugs and planned work
+- :memo: check [doc/TODO.md][todo], it lists known bugs and planned work
 
 > [!IMPORTANT]
 > Talking about code and problems first is often the best way to get
@@ -100,8 +100,8 @@ Bill & Ted, [be excellent to each other][conduct].
 
 
 [discuss]:   https://github.com/orgs/kernelkit/discussions
-[todo]:      https://github.com/kernelkit/dhcprelayd/blob/main/TODO.md
-[ChangeLog]: https://github.com/kernelkit/dhcprelayd/blob/main/ChangeLog.md
+[todo]:      https://github.com/kernelkit/dhcprelayd/blob/main/doc/TODO.md
+[ChangeLog]: https://github.com/kernelkit/dhcprelayd/blob/main/doc/ChangeLog.md
 [tests]:     https://github.com/kernelkit/dhcprelayd/blob/main/tests/README.md
 [kstyle]:    https://www.kernel.org/doc/html/latest/process/coding-style.html
 [DCO]:       https://developercertificate.org/
