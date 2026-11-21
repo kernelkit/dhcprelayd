@@ -1,4 +1,4 @@
-AC_INIT([dhcprelayd], [2.2-pre], [https://github.com/kernelkit/dhcprelayd/issues], [dhcprelayd], [https://github.com/kernelkit/dhcprelayd])
+AC_INIT([dhcprelayd], [3.0-rc1], [https://github.com/kernelkit/dhcprelayd/issues], [dhcprelayd], [https://github.com/kernelkit/dhcprelayd])
 AC_PREREQ([2.59])
 AC_CONFIG_HEADERS([src/config.h])
 

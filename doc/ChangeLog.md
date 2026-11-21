@@ -3,11 +3,11 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
-- Versions >= v2.2, KernelKit, as dhcprelayd
+- Versions >= v3.0, KernelKit, as dhcprelayd
 - Versions >= v2.0, Westermo Teleindustri AB, as dhcp-helper
 - Versions <= v1.2, Simon Kelley <simon@thekelleys.org.uk>
 
-[v2.2][UNRELEASED]
+[v3.0][UNRELEASED]
 ---------------------
 ### Changes
 - Fork of the archived Westermo dhcp-helper, renamed to dhcprelayd
