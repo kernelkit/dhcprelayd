@@ -68,7 +68,8 @@ static int get_ifindex(struct msghdr *msg)
 	return ifindex;
 }
 
-static struct dhcp_packet_with_opts *packet_rcv_udp(int sd, unsigned char *buf, int sz, int *len, int *ifindex)
+static struct dhcp_packet_with_opts *packet_rcv_udp(int sd, unsigned char *buf, int sz, int *len, int *ifindex,
+						    struct in_addr *src)
 {
 	union {
 		struct cmsghdr align;	/* this ensures alignment */
@@ -82,7 +83,7 @@ static struct dhcp_packet_with_opts *packet_rcv_udp(int sd, unsigned char *buf, 
 	msg.msg_control = control_u.control;
 	msg.msg_controllen = sizeof(control_u);
 	msg.msg_name = &saddr;
-	msg.msg_namelen = 0;
+	msg.msg_namelen = sizeof(saddr);
 	msg.msg_iov = &iov;
 	msg.msg_iovlen = 1;
 	iov.iov_base = buf;	// packet;
@@ -100,6 +101,7 @@ static struct dhcp_packet_with_opts *packet_rcv_udp(int sd, unsigned char *buf, 
 		syslog2(LOG_WARNING, "Invalid ifindex for received udp packet (%d).", *ifindex);
 		return NULL;
 	}
+	*src = saddr.sin_addr;
 
 	return (struct dhcp_packet_with_opts *)buf;
 }
@@ -167,7 +169,7 @@ static void packet_cb_raw(struct ev_loop *loop __attribute__ ((unused)), ev_io *
 	/* Replies are read from the UDP socket */
 	packet = packet_rcv_raw(w->fd, buf, sizeof(buf) - DHCP_HEADROOM, &len, &ifindex);
 	if (packet && packet->header.op == BOOTREQUEST)
-		handle_packet(cfg, &packet->header, len, ifindex, -1);
+		handle_packet(cfg, &packet->header, len, ifindex, (struct in_addr){ 0 });
 
 	ev_io_start(loop, w);
 }
@@ -177,14 +179,15 @@ static void udp_recv(struct ev_loop *loop, ev_io *w, int replies_only)
 	static unsigned char buf[2048];	/* MAXIMUM_PACKET_SIZE */
 	conf_t *cfg = ev_userdata(loop);
 	struct dhcp_packet_with_opts *packet;
+	struct in_addr src;
 	int ifindex;
 	int len;
 
 	ev_io_stop(loop, w);
 
-	packet = packet_rcv_udp(w->fd, buf, sizeof(buf) - DHCP_HEADROOM, &len, &ifindex);
+	packet = packet_rcv_udp(w->fd, buf, sizeof(buf) - DHCP_HEADROOM, &len, &ifindex, &src);
 	if (packet && (!replies_only || packet->header.op == BOOTREPLY))
-		handle_packet(cfg, &packet->header, len, ifindex, w->fd);
+		handle_packet(cfg, &packet->header, len, ifindex, src);
 	ev_io_start(loop, w);
 }
 

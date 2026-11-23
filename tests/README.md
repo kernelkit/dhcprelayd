@@ -94,6 +94,15 @@ and each request reaches the server exactly once.
 
 Topology: routed
 
+### forged
+
+Replies the relay agent must not relay: one for another relay agent,
+which crashed it, and one from the client itself, which gave the relay
+agent an ARP entry for the offered address.  Both are dropped, and the
+client still gets a lease from the server.
+
+Topology: routed
+
 ### giaddr
 
 With `remote-id-type giaddr`, the client gets the static address the

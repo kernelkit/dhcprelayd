@@ -201,7 +201,7 @@ send()
 {
     ns=$1
     shift
-    nsrun "$ns" python3 "$(dirname "$0")/send.py" "$@"
+    nsrun "$ns" python3 "$(dirname "$0")/send.py" "$@" || FAIL "Failed sending from $ns"
     sleep 0.3
 }
 

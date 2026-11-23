@@ -36,8 +36,9 @@ the file is rejected.
 A DHCP server to relay requests to.  Requests are sent to all servers.
 At least one server is required, here or in each
 .B interface
-section.  For a DHCP server on the same system use 127.0.0.1, a gateway
-address is rejected, see
+section.  Replies are relayed only from these addresses, so use the
+address the server replies from.  For a DHCP server on the same system
+use 127.0.0.1, a gateway address is rejected, see
 .BR dhcprelayd (8).
 .RS
 .TP

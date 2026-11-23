@@ -31,7 +31,8 @@ of the relay agent, if enabled,
 .IP \(bu
 sends the request to all servers configured for the interface.
 .PP
-For each reply it removes option 82, adds an FDB entry for the client on
+Replies are relayed only from the servers of the interface, others are
+dropped.  For each reply it removes option 82, adds an FDB entry for the client on
 the port the request came in on, and an ARP entry for the offered
 address, and sends the reply to the client.  The FDB entry is for switch
 cores that do not learn from frames trapped to the CPU.
