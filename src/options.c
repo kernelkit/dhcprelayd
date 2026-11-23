@@ -113,7 +113,7 @@ static unsigned char *add_option82(unsigned char *p, unsigned char *end, conf_t 
 	struct dhcp_opt opt_rid;
 	struct dhcp_opt opt_sor;
 	struct dhcp_opt *opt_root;
-	char host[HOST_NAME_MAX];
+	char host[HOST_NAME_MAX + 1] = "";
 
 	memset(ifname, 0, IF_NAMESIZE);
 
@@ -136,7 +136,7 @@ static unsigned char *add_option82(unsigned char *p, unsigned char *end, conf_t 
 		break;
 
 	case RID_TYPE_HOSTNAME:
-		gethostname(host, sizeof(host));
+		gethostname(host, sizeof(host) - 1);
 		opt_rid.val = (unsigned char *)host;
 		opt_rid.len = strlen(host);
 		break;
