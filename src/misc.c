@@ -89,19 +89,33 @@ static int nl_req(void *req, size_t len)
 	return err;
 }
 
+/* Rule for bridge port @ifindex in the nft script @fp, returns 0 if it is not a bridge port */
+static int nft_drop(FILE *fp, int ifindex, const char *match)
+{
+	char ifname[IFNAMSIZ];
+
+	if (!iface_is_bridged(ifindex) || !if_indextoname(ifindex, ifname))
+		return 0;
+
+	if (strchr(ifname, '"')) {
+		syslog2(LOG_ERR, "Cannot set up nftables for interface %s, quote in name", ifname);
+		return 0;
+	}
+	fprintf(fp, "%siif \"%s\" ip protocol udp udp dport 67 drop\n", match, ifname);
+
+	return 1;
+}
+
 int setup_nftables(conf_t *cfg)
 {
 	conf_group_t *group;
 	conf_iface_t *iface;
 	char file[128] = "/tmp/dhcprelayd.XXXXXX";
-	char cmd[256], ifname[IFNAMSIZ];
+	char cmd[256];
 	FILE *fp;
 	int err = 0, fd, anybridged = 0;
-  mode_t cur_umask;
 
-	cur_umask = umask(0600);
 	fd = mkstemp(file);
-	umask(cur_umask);
 	if (fd == -1) {
 		syslog2(LOG_ERR, "Could not generate tempfile");
 		return 1;
@@ -118,28 +132,15 @@ int setup_nftables(conf_t *cfg)
 	fprintf(fp, "table bridge filter {\n");
 	fprintf(fp, "chain " NFT_IN_CHAIN " {\n type filter hook input priority -200\n");
 	TAILQ_FOREACH(group, &cfg->group_list, link) {
-		TAILQ_FOREACH(iface, &group->iface_list, link) {
-			if (iface_is_bridged(iface->ifindex)) {
-				anybridged = 1;
-				if_indextoname(iface->ifindex, ifname);
-				syslog2(LOG_DEBUG, "Interface %s is bridged, setting up nftables", ifname);
-				fprintf(fp, "iif %s ip protocol udp udp dport 67 drop\n", ifname);
-			}
-		}
+		TAILQ_FOREACH(iface, &group->iface_list, link)
+			anybridged |= nft_drop(fp, iface->ifindex, "");
 	}
 	fprintf(fp, "}\n");
 
 	fprintf(fp, "chain " NFT_FWD_CHAIN " {\n type filter hook forward priority -200\n");
 	TAILQ_FOREACH(group, &cfg->group_list, link) {
-		TAILQ_FOREACH(iface, &group->iface_list, link) {
-			/* Only add nftables rules if interface is bridged. */
-			if (iface_is_bridged(iface->ifindex)) {
-				anybridged = 1;
-				if_indextoname(iface->ifindex, ifname);
-				syslog2(LOG_DEBUG, "Interface %s is bridged, setting up nftables", ifname);
-				fprintf(fp, "pkttype broadcast iif %s ip protocol udp udp dport 67 drop\n", ifname);
-			}
-		}
+		TAILQ_FOREACH(iface, &group->iface_list, link)
+			anybridged |= nft_drop(fp, iface->ifindex, "pkttype broadcast ");
 	}
 	fprintf(fp, "}\n}");
 
