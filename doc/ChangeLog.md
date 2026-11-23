@@ -44,6 +44,9 @@ All notable changes to the project are documented in this file.
   127.0.0.1.  dnsmasq needs `--bind-dynamic` or `--bind-interfaces`
 
 ### Fixes
+- Replies from a server behind a bridge port that is relayed from were
+  dropped, so clients got no address with the server on the same subnet
+  behind such a port, e.g. in a chain of relay agents
 - Requests on a routed interface were relayed twice, so the server got
   every DHCPDISCOVER and DHCPREQUEST two times
 - Requests were relayed with 42 bytes of trailing garbage after the DHCP

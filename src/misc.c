@@ -89,7 +89,11 @@ static int nl_req(void *req, size_t len)
 	return err;
 }
 
-/* Rule for bridge port @ifindex in the nft script @fp, returns 0 if it is not a bridge port */
+/*
+ * Rule for bridge port @ifindex in the nft script @fp, returns 0 if it
+ * is not a bridge port.  Only requests, op 1 first in the UDP payload,
+ * the replies from a server behind the port are for the UDP socket.
+ */
 static int nft_drop(FILE *fp, int ifindex, const char *match)
 {
 	char ifname[IFNAMSIZ];
@@ -101,7 +105,7 @@ static int nft_drop(FILE *fp, int ifindex, const char *match)
 		syslog2(LOG_ERR, "Cannot set up nftables for interface %s, quote in name", ifname);
 		return 0;
 	}
-	fprintf(fp, "%siif \"%s\" ip protocol udp udp dport 67 drop\n", match, ifname);
+	fprintf(fp, "%siif \"%s\" ip protocol udp udp dport 67 @th,64,8 1 drop\n", match, ifname);
 
 	return 1;
 }
