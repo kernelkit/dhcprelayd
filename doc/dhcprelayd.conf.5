@@ -68,6 +68,9 @@ remove it from replies.  Without this section the option is not added.
 .BI policy " = " replace \fR|\fB keep \fR|\fB drop
 What to do with a request from a client that already carries option 82.
 A client should never send it, it is meant to be added by a relay agent.
+Does not apply to interfaces and ports set as
+.BR trusted ,
+there option 82 is always kept.
 .RS
 .TP
 .B replace
@@ -75,8 +78,8 @@ Remove the client's option 82 and add the relay agent's own, so a client
 cannot pick its own circuit-id.  The default.
 .TP
 .B keep
-Forward the request with the client's option 82, e.g. from a trusted
-device that adds its own.
+Forward the request with the client's option 82, on all interfaces and
+ports.
 .TP
 .B drop
 Discard the request.
@@ -116,6 +119,19 @@ Servers for this interface, same syntax as the global
 .BR server .
 They replace the global servers for this interface.
 .TP
+.BI trusted " = true" \fR|\fB false
+Set to true where another relay agent, or a switch that adds option 82,
+is connected.  Option 82 in a request is then kept, whatever the
+.BR policy ,
+and requests that are already relayed by another relay agent, with
+giaddr set, are forwarded unchanged.  A client could send such requests
+too, so set it only where needed.  Applies to all ports of the interface
+unless set in a
+.B port
+section.  Default false: the
+.B policy
+applies, and already relayed requests are dropped.
+.TP
 .BI port " name " { " ... " }
 A bridge port to relay requests from, when the interface is a bridge.
 Only the listed ports are relayed from.  Without
@@ -129,6 +145,11 @@ Circuit-id in option 82, default the name of the port.
 .BI circuit-id-hex " = xx:xx:..."
 Circuit-id as bytes, see
 .BR "HEX VALUES" .
+.TP
+.BI trusted " = true" \fR|\fB false
+As
+.B trusted
+for the interface, for this port only.
 .PP
 Set
 .B circuit-id

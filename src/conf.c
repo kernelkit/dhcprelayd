@@ -76,11 +76,13 @@ static cfg_opt_t option82_opts[] = {
 static cfg_opt_t port_opts[] = {
 	CFG_STR("circuit-id", NULL, CFGF_NONE),
 	CFG_STR("circuit-id-hex", NULL, CFGF_NONE),
+	CFG_BOOL("trusted", cfg_false, CFGF_NONE),
 	CFG_END()
 };
 
 static cfg_opt_t interface_opts[] = {
 	CFG_STR("giaddr", "auto", CFGF_NONE),
+	CFG_BOOL("trusted", cfg_false, CFGF_NONE),
 	CFG_SEC("server", server_opts, CFGF_MULTI | CFGF_TITLE | CFGF_NO_TITLE_DUPES),
 	CFG_SEC("port", port_opts, CFGF_MULTI | CFGF_TITLE | CFGF_NO_TITLE_DUPES),
 	CFG_END()
@@ -299,7 +301,7 @@ static int read_servers(cfg_t *cfg, struct server_list *list)
 	return 0;
 }
 
-static conf_iface_t *add_iface(conf_group_t *group, int ifindex)
+static conf_iface_t *add_iface(conf_group_t *group, int ifindex, int trusted)
 {
 	conf_iface_t *iface;
 
@@ -310,17 +312,19 @@ static conf_iface_t *add_iface(conf_group_t *group, int ifindex)
 	}
 	TAILQ_INSERT_TAIL(&group->iface_list, iface, link);
 	iface->ifindex = ifindex;
+	iface->trusted = trusted;
 
 	return iface;
 }
 
 static int read_ports(cfg_t *cfg, conf_group_t *group)
 {
+	int trusted = cfg_getbool(cfg, "trusted");
 	unsigned int i;
 
 	/* A routed port, or a bridge used as one */
 	if (cfg_size(cfg, "port") == 0)
-		return add_iface(group, group->ifindex) ? 0 : 1;
+		return add_iface(group, group->ifindex, trusted) ? 0 : 1;
 
 	for (i = 0; i < cfg_size(cfg, "port"); i++) {
 		cfg_t *sec = cfg_getnsec(cfg, "port", i);
@@ -333,7 +337,7 @@ static int read_ports(cfg_t *cfg, conf_group_t *group)
 			return 1;
 		}
 
-		iface = add_iface(group, ifindex);
+		iface = add_iface(group, ifindex, is_set(sec, "trusted") ? (int)cfg_getbool(sec, "trusted") : trusted);
 		if (!iface)
 			return 1;
 		iface->circuit_id_len = read_id(sec, "circuit-id", "circuit-id-hex", iface->circuit_id);

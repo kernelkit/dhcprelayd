@@ -199,3 +199,13 @@ After changing the circuit-id of port `c1` and sending SIGHUP to the
 relay agent, the client gets the address for the new circuit-id.
 
 Topology: bridged
+
+### trusted
+
+`trusted` is set for the interface and turned off for port `c1`.  A
+request that is already relayed, with giaddr set, is dropped from `c1`
+and reaches the server unchanged from `c2`.  A request with option 82
+and no giaddr gets the relay agent's option 82 from `c1` and keeps its
+own from `c2`.
+
+Topology: bridged

@@ -21,7 +21,7 @@
 #define __OPTIONS_H__
 #include "packet.h"
 
-size_t add_options (struct dhcp_packet_with_opts *mess, size_t sz, int iface_index, struct in_addr iface_addr, conf_group_t *group, conf_t *cfg);
+size_t add_options(struct dhcp_packet_with_opts *mess, size_t sz, struct in_addr addr, conf_iface_t *iface, conf_t *cfg);
 size_t remove_options(struct dhcp_packet_with_opts *mess, size_t sz);
 int    has_option82  (struct dhcp_packet_with_opts *mess, size_t sz);
 

@@ -58,15 +58,20 @@ Option 82
 
 The circuit-id defaults to the name of the port the request came in on,
 and can be set per port.  The remote-id is the hostname, the `giaddr`,
-or a configured string.
+or a configured string.  Both can also be given as hex values, see
+[String or hex values](#string-or-hex-values).
 
 A client should never send option 82 itself, it is meant to be added by
 a relay agent.  By default the relay agent replaces it with its own, so
 a client cannot pick its own circuit-id, and with it, its address.  The
-`policy` setting can also keep it, for a trusted downstream device, or
-drop such requests.  Requests already relayed by another relay agent,
-with `giaddr` set, are always forwarded as they are.  Both can also be given as hex values, see
-[String or hex values](#string-or-hex-values).
+`policy` setting can also keep it, or drop such requests.
+
+An interface or port where another relay agent is connected, or a switch
+that adds option 82, is set as `trusted`.  Requests from it keep the
+option 82 they have, whatever the `policy`.  That includes requests
+already relayed by another relay agent, with `giaddr` set, which are
+forwarded as they are.  From all other interfaces and ports such
+requests are dropped, a client could send them too.
 
 
 Getting started
@@ -150,10 +155,16 @@ least one is required
     for the first IPv4 address of the interface
   * **server ADDRESS { }** - servers for this interface, replace the
     global ones
+  * **trusted** - `true` where another relay agent, or a switch that
+    adds option 82, is connected: option 82 in a request is kept, and
+    requests already relayed by another relay agent are forwarded.
+    Default `false`, the `policy` applies and relayed requests are
+    dropped.  For all ports of the interface, unless set per port
   * **port NAME { }** - bridge port to relay requests from.  Without
     ports, requests are relayed from the interface itself
     * **circuit-id** - circuit-id as text, default the port name
     * **circuit-id-hex** - circuit-id as bytes, see below
+    * **trusted** - as for the interface, for this port only
 
 The `-hex` settings take colon separated pairs of hex digits, e.g.
 `c0:ff:ee`, for values that are not text, including NUL bytes.  Set

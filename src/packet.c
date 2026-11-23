@@ -40,19 +40,15 @@ union {
 	char control[CMSG_SPACE(sizeof(struct in_pktinfo))];
 } control_u;
 
-/* Search for group by iface index. 
- * @Return  NULL if not found. */
-conf_group_t *find_group(conf_t *cfg, int ifindex)
+/* The interface or port with @ifindex and its group, NULL if not found */
+static conf_iface_t *find_iface(conf_t *cfg, int ifindex, conf_group_t **group)
 {
-	conf_group_t *entry;
-	conf_iface_t *entry2;
+	conf_iface_t *iface;
 
-	TAILQ_FOREACH(entry, &cfg->group_list, link) {
-		TAILQ_FOREACH(entry2, &entry->iface_list, link) {
-			int index = entry2->ifindex;
-
-			if (index == ifindex)
-				return entry;
+	TAILQ_FOREACH(*group, &cfg->group_list, link) {
+		TAILQ_FOREACH(iface, &(*group)->iface_list, link) {
+			if (iface->ifindex == ifindex)
+				return iface;
 		}
 	}
 	return NULL;
@@ -115,20 +111,26 @@ static int handle_request(conf_t *cfg, struct dhcp_packet *packet, int ifindex, 
 {
 	struct sockaddr_in saddr;
 	conf_group_t *group;
+	conf_iface_t *iface;
 	conf_server_t *server;
 
 	memset(&saddr, 0, sizeof(saddr));
 
 	syslog2(LOG_DEBUG, "Received a request");
 
-	group = find_group(cfg, ifindex);
-	if (!group) {
+	iface = find_iface(cfg, ifindex, &group);
+	if (!iface) {
 		syslog2(LOG_ERR, "Received packet on wrong interface (ifindex: %d), discarding it.", ifindex);
 		return 1;
 	}
 	/* already relayed ? */
 	if (packet->giaddr.s_addr) {
 		syslog2(LOG_DEBUG, "Already relayed by %s", inet_ntoa(packet->giaddr));
+
+		if (!iface->trusted) {
+			syslog2(LOG_NOTICE, "Dropping relayed request on ifindex %d, not trusted", ifindex);
+			return 0;
+		}
 
 		if (is_local_gw(cfg, packet->giaddr.s_addr)) {
 			/* RFC3046, 2.1.1, discard if spoofed */
@@ -144,8 +146,8 @@ static int handle_request(conf_t *cfg, struct dhcp_packet *packet, int ifindex, 
 		struct in_addr addr;
 
 		/* Replace is done by add_options() */
-		if (add && cfg->opt82.policy != OPT82_REPLACE && has_option82(mess, sz)) {
-			if (cfg->opt82.policy == OPT82_DROP) {
+		if (add && (iface->trusted || cfg->opt82.policy != OPT82_REPLACE) && has_option82(mess, sz)) {
+			if (!iface->trusted && cfg->opt82.policy == OPT82_DROP) {
 				syslog2(LOG_NOTICE, "Dropping request with option 82 from client on ifindex %d", ifindex);
 				return 0;
 			}
@@ -157,7 +159,7 @@ static int handle_request(conf_t *cfg, struct dhcp_packet *packet, int ifindex, 
 
 		addr.s_addr = packet->giaddr.s_addr = group->giaddr;
 		if (add) {
-			sz = add_options(mess, sz, ifindex, addr, group, cfg);
+			sz = add_options(mess, sz, addr, iface, cfg);
 			if (!sz) {
 				syslog2(LOG_NOTICE, "Dropping malformed request on ifindex %d", ifindex);
 				return 0;

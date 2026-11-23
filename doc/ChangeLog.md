@@ -26,6 +26,12 @@ All notable changes to the project are documented in this file.
   the client's option and adds the relay agent's own.  Previously a
   second option 82 was added, and a client could pick its own
   circuit-id
+- New `interface` and `port` setting `trusted`, for where another relay
+  agent, or a switch that adds option 82, is connected.  Option 82 in
+  requests from it is kept, whatever the `policy`.  Requests already
+  relayed by another relay agent, with giaddr set, are now dropped from
+  all other interfaces and ports.  They were forwarded with the option
+  82 they had, so a client could pick its own circuit-id that way
 - The DHCP server can run on the same system as the relay agent, e.g.
   for addresses per port set up in dnsmasq.  The relay agent binds UDP
   port 67 only on its gateway addresses, and reaches the server at

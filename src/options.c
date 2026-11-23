@@ -104,8 +104,8 @@ static unsigned char *encap_opts(struct dhcp_opt *opt, int encap, unsigned char 
 	return p;
 }
 
-static unsigned char *add_option82(unsigned char *p, unsigned char *end, int ifindex, conf_t *cfg,
-				   conf_iface_t *iface, struct in_addr addr)
+static unsigned char *add_option82(unsigned char *p, unsigned char *end, conf_t *cfg, conf_iface_t *iface,
+				   struct in_addr addr)
 {
 	unsigned char ifname[IF_NAMESIZE];
 	char *giaddr;
@@ -119,7 +119,7 @@ static unsigned char *add_option82(unsigned char *p, unsigned char *end, int ifi
 
 	syslog2(LOG_DEBUG, "Adding option 82.");
 
-	if (!if_indextoname(ifindex, (char *)&ifname[0]))
+	if (!if_indextoname(iface->ifindex, (char *)&ifname[0]))
 		return p;
 
 	opt_rid.opt = SUBOPT_REMOTE_ID;
@@ -166,27 +166,12 @@ static unsigned char *add_option82(unsigned char *p, unsigned char *end, int ifi
 	return encap_opts(opt_root, OPTION_AGENT_ID, p, end);
 }
 
-/* Is request from @iface_index allowed? */
-static conf_iface_t *find_iface_cfg(conf_group_t *group, int ifindex)
-{
-	conf_iface_t *entry;
-
-	TAILQ_FOREACH(entry, &group->iface_list, link) {
-		int index = entry->ifindex;
-
-		if (index == ifindex)
-			return entry;
-	}
-	return NULL;
-}
-
 /* Returns the new size of the message, or 0 if it is malformed */
-size_t add_options(struct dhcp_packet_with_opts *mess, size_t sz, int ifindex, struct in_addr addr, conf_group_t *group, conf_t *cfg)
+size_t add_options(struct dhcp_packet_with_opts *mess, size_t sz, struct in_addr addr, conf_iface_t *iface, conf_t *cfg)
 {
 	unsigned char *start = &mess->options[0] + sizeof(u32);
 	unsigned char *end;
 	u32 cookie = htonl(DHCP_COOKIE);
-	conf_iface_t *iface;
 	unsigned char *p;
 
 	syslog2(LOG_DEBUG, "Adding options");
@@ -194,11 +179,6 @@ size_t add_options(struct dhcp_packet_with_opts *mess, size_t sz, int ifindex, s
 	if (!cfg->opt82.enabled)
 		return sz;
 
-	iface = find_iface_cfg(group, ifindex);
-	if (!iface) {
-		syslog2(LOG_ERR, "Could not find iface configuration for index %d", ifindex);
-		return sz;
-	}
 	if (mess->header.op != BOOTREQUEST)
 		return sz;
 
@@ -219,7 +199,7 @@ size_t add_options(struct dhcp_packet_with_opts *mess, size_t sz, int ifindex, s
 	memset(p, 0, end - p);
 
 	/* Option 82 should always be added last */
-	p = add_option82(p, end, ifindex, cfg, iface, addr);
+	p = add_option82(p, end, cfg, iface, addr);
 	*p++ = OPTION_END;
 
 	sz = p - (unsigned char *)mess;

@@ -39,10 +39,13 @@ cores that do not learn from frames trapped to the CPU.
 .PP
 Requests already relayed by another relay agent, with
 .I giaddr
-set, are forwarded unchanged.  Requests with one of the relay agent's
-own gateway addresses in
+set, are forwarded unchanged from interfaces and ports set as
+.BR trusted ,
+and dropped from all others.  Option 82 in other requests from a trusted
+interface or port is also kept.  Requests with one of the relay agent's own
+gateway addresses in
 .I giaddr
-are dropped.
+are always dropped.
 .PP
 On a bridge,
 .B dhcprelayd
