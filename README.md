@@ -193,10 +193,13 @@ port are set up in the server's own configuration.  dhcprelayd binds
 UDP port 67 only on its gateway addresses, which leaves `0.0.0.0:67` to
 the server.  The server must allow that second socket, for dnsmasq
 start it with `--bind-dynamic` or `--bind-interfaces`.  Relay requests
-to the server at 127.0.0.1:
+to the server at 127.0.0.1, and set `force-server-identity`: without it
+the clients are told that their server is 127.0.0.1, and cannot renew
+their leases until they give up and broadcast again.
 
 ```
 server 127.0.0.1 {}
+force-server-identity = true
 option82 {}
 interface vlan1 {
     port eth0 {}

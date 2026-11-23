@@ -40,6 +40,10 @@ section.  Replies are relayed only from these addresses, so use the
 address the server replies from.  For a DHCP server on the same system
 use 127.0.0.1, a gateway address is rejected, see
 .BR dhcprelayd (8).
+Set
+.B force-server-identity
+with such a server, or the clients are told that their server is
+127.0.0.1.
 .RS
 .TP
 .BI port " = port"
