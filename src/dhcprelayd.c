@@ -106,7 +106,8 @@ static struct dhcp_packet_with_opts *packet_rcv_udp(int sd, unsigned char *buf, 
 	return (struct dhcp_packet_with_opts *)buf;
 }
 
-static struct dhcp_packet_with_opts *packet_rcv_raw(int sd, unsigned char *buf, int sz, int *len, int *ifindex)
+static struct dhcp_packet_with_opts *packet_rcv_raw(int sd, unsigned char *buf, int sz, int *len, int *ifindex,
+						    unsigned char **mac)
 {
 	struct sockaddr_ll sl;
 	struct ethhdr *eth_hdr = (struct ethhdr *)buf;
@@ -152,6 +153,7 @@ static struct dhcp_packet_with_opts *packet_rcv_raw(int sd, unsigned char *buf, 
 		return NULL;
 	}
 	*len = ulen - sizeof(struct udphdr);
+	*mac = eth_hdr->h_source;
 
 	return (struct dhcp_packet_with_opts *)(udp + 1);
 }
@@ -161,15 +163,16 @@ static void packet_cb_raw(struct ev_loop *loop __attribute__ ((unused)), ev_io *
 	static unsigned char buf[2048];	/* MAXIMUM_PACKET_SIZE */
 	conf_t *cfg = ev_userdata(loop);
 	struct dhcp_packet_with_opts *packet;
+	unsigned char *mac;
 	int ifindex;
 	int len;
 
 	ev_io_stop(loop, w);
 
 	/* Replies are read from the UDP socket */
-	packet = packet_rcv_raw(w->fd, buf, sizeof(buf) - DHCP_HEADROOM, &len, &ifindex);
+	packet = packet_rcv_raw(w->fd, buf, sizeof(buf) - DHCP_HEADROOM, &len, &ifindex, &mac);
 	if (packet && packet->header.op == BOOTREQUEST)
-		handle_packet(cfg, &packet->header, len, ifindex, (struct in_addr){ 0 });
+		handle_request(cfg, &packet->header, len, ifindex, mac);
 
 	ev_io_start(loop, w);
 }
@@ -186,8 +189,10 @@ static void udp_recv(struct ev_loop *loop, ev_io *w, int replies_only)
 	ev_io_stop(loop, w);
 
 	packet = packet_rcv_udp(w->fd, buf, sizeof(buf) - DHCP_HEADROOM, &len, &ifindex, &src);
-	if (packet && (!replies_only || packet->header.op == BOOTREPLY))
-		handle_packet(cfg, &packet->header, len, ifindex, src);
+	if (packet && packet->header.op == BOOTREPLY)
+		handle_reply(cfg, &packet->header, len, src);
+	else if (packet && packet->header.op == BOOTREQUEST && !replies_only)
+		handle_request(cfg, &packet->header, len, ifindex, NULL);
 	ev_io_start(loop, w);
 }
 

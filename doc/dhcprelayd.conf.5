@@ -124,8 +124,9 @@ Set to true where another relay agent, or a switch that adds option 82,
 is connected.  Option 82 in a request is then kept, whatever the
 .BR policy ,
 and requests that are already relayed by another relay agent, with
-giaddr set, are forwarded unchanged.  A client could send such requests
-too, so set it only where needed.  Applies to all ports of the interface
+giaddr set, are forwarded unchanged.  The client hardware address in a
+request is not checked against the Ethernet source address of the frame.
+A client could send such requests too, so set it only where needed.  Applies to all ports of the interface
 unless set in a
 .B port
 section.  Default false: the

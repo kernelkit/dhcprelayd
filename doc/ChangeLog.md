@@ -59,6 +59,11 @@ All notable changes to the project are documented in this file.
   after it
 - With two option 82 in a request only the first was removed, so with
   policy `replace` a client could still pick its own circuit-id
+- The FDB entry for a client was added for the hardware address in its
+  request, which the client could set to any address, e.g. one that is
+  not allowed on its port.  Now a request is dropped unless its client
+  hardware address is the Ethernet source address of the frame, or the
+  port is `trusted`
 - A reply for another relay agent, with the broadcast flag set, crashed
   the relay agent
 - Replies were relayed from any host, so a host that could reach a

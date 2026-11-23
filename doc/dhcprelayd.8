@@ -32,10 +32,17 @@ of the relay agent, if enabled,
 sends the request to all servers configured for the interface.
 .PP
 Replies are relayed only from the servers of the interface, others are
-dropped.  For each reply it removes option 82, adds an FDB entry for the client on
-the port the request came in on, and an ARP entry for the offered
+dropped.  For each reply it removes option 82, adds an FDB entry for the
+client on the port the request came in on, and an ARP entry for the offered
 address, and sends the reply to the client.  The FDB entry is for switch
 cores that do not learn from frames trapped to the CPU.
+.PP
+A request is dropped if its client hardware address is not the Ethernet
+source address of the frame, unless the interface or port is
+.BR trusted .
+Requests to
+.B udp-listen-port
+are not checked.
 .PP
 Requests already relayed by another relay agent, with
 .I giaddr

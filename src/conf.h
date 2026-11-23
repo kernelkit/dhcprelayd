@@ -38,7 +38,7 @@ typedef struct conf_iface_t {
 
 	char circuit_id[OPT82_ID_LEN];
 	int circuit_id_len;
-	int trusted;		/* relay requests from other relay agents */
+	int trusted;		/* a relay agent or switch, not a client */
 	ev_io io;
 	int sd;			/* sd in io, for clean-up access */
 } conf_iface_t;

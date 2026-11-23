@@ -61,7 +61,7 @@ typedef struct client_cache_t {
 	int ifindex;
 } client_cache_t;
 
-/* @src is the sender of a reply, unused for requests */
-int handle_packet(conf_t *cfg, struct dhcp_packet *packet, ssize_t sz, int ifindex, struct in_addr src);
+int handle_request(conf_t *cfg, struct dhcp_packet *packet, ssize_t sz, int ifindex, const unsigned char *mac);
+int handle_reply(conf_t *cfg, struct dhcp_packet *packet, ssize_t sz, struct in_addr src);
 
 #endif

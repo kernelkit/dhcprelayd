@@ -26,6 +26,8 @@
 #include <sys/ioctl.h>
 #include <arpa/inet.h>
 #include <net/if.h>
+#include <net/if_arp.h>
+#include <linux/if_ether.h>
 
 #include "logging.h"
 #include "packet.h"
@@ -107,12 +109,30 @@ static int from_server(conf_t *cfg, conf_group_t *group, in_addr_t src)
 	return 0;
 }
 
-static int handle_request(conf_t *cfg, struct dhcp_packet *packet, int ifindex, ssize_t sz)
+static int valid(struct dhcp_packet *packet, ssize_t sz)
+{
+	if (sz < (ssize_t)sizeof(*packet))
+		return 0;
+
+	/* rfc1542 says discard if > 16 */
+	if (packet->hops > 16)
+		return 0;
+
+	return packet->hlen <= DHCP_CHADDR_MAX;
+}
+
+/* @mac is the Ethernet source address, NULL for a request to udp-listen-port, not checked */
+int handle_request(conf_t *cfg, struct dhcp_packet *packet, ssize_t sz, int ifindex, const unsigned char *mac)
 {
 	struct sockaddr_in saddr;
 	conf_group_t *group;
 	conf_iface_t *iface;
 	conf_server_t *server;
+	int direct;
+
+	if (!valid(packet, sz))
+		return 1;
+	packet->hops++;
 
 	memset(&saddr, 0, sizeof(saddr));
 
@@ -123,6 +143,14 @@ static int handle_request(conf_t *cfg, struct dhcp_packet *packet, int ifindex, 
 		syslog2(LOG_ERR, "Received packet on wrong interface (ifindex: %d), discarding it.", ifindex);
 		return 1;
 	}
+	/* From the client itself, not through a relay agent or a router */
+	direct = mac && packet->htype == ARPHRD_ETHER && packet->hlen == ETH_ALEN &&
+		!memcmp(packet->chaddr, mac, ETH_ALEN);
+	if (mac && !direct && !iface->trusted) {
+		syslog2(LOG_NOTICE, "Dropping request on ifindex %d, client address is not the sender's", ifindex);
+		return 0;
+	}
+
 	/* already relayed ? */
 	if (packet->giaddr.s_addr) {
 		syslog2(LOG_DEBUG, "Already relayed by %s", inet_ntoa(packet->giaddr));
@@ -173,13 +201,13 @@ static int handle_request(conf_t *cfg, struct dhcp_packet *packet, int ifindex, 
 		syslog2(LOG_DEBUG, "Forward request to %s!", inet_ntoa(saddr.sin_addr));
 		while (sendto(group->sd, packet, sz, 0, (struct sockaddr *)&saddr, sizeof(saddr)) == -1 && errno == EINTR) ;
 	}
-	if (add_fdb_entry(ifindex, packet->chaddr))
+	if (direct && add_fdb_entry(ifindex, packet->chaddr))
 		return 1;
 
 	return 0;
 }
 
-static int handle_reply(conf_t *cfg, struct dhcp_packet *packet, int ifindex, ssize_t sz, struct in_addr src)
+int handle_reply(conf_t *cfg, struct dhcp_packet *packet, ssize_t sz, struct in_addr src)
 {
 	struct msghdr msg;
 	struct iovec iov;
@@ -189,8 +217,11 @@ static int handle_reply(conf_t *cfg, struct dhcp_packet *packet, int ifindex, ss
 	struct cmsghdr *cmptr;
 	int result = 0;
 
-	syslog2(LOG_DEBUG, "Received a reply on ifindex %d", ifindex);
-	/* packet from server send back to client */
+	if (!valid(packet, sz))
+		return 1;
+	packet->hops++;
+
+	syslog2(LOG_DEBUG, "Received a reply from %s", inet_ntoa(src));
 
 	group = find_group_by_giaddr(cfg, packet->giaddr);
 	if (!group) {
@@ -255,26 +286,6 @@ static int handle_reply(conf_t *cfg, struct dhcp_packet *packet, int ifindex, ss
 		if (result < 0)
 			syslog2(LOG_WARNING, "Sending error: %m");
 	} while (result == -1 && errno == EINTR);
-
-	return 0;
-}
-
-int handle_packet(conf_t *cfg, struct dhcp_packet *packet, ssize_t sz, int ifindex, struct in_addr src)
-{
-	if (sz < (ssize_t)sizeof(*packet))
-		return 1;
-
-	/* rfc1542 says discard if > 16 */
-	if ((packet->hops++) > 16)
-		return 1;
-
-	if (packet->hlen > DHCP_CHADDR_MAX)
-		return 1;
-
-	if (packet->op == BOOTREQUEST)
-		handle_request(cfg, packet, ifindex, sz);
-	else if (packet->op == BOOTREPLY)
-		handle_reply(cfg, packet, ifindex, sz, src);
 
 	return 0;
 }

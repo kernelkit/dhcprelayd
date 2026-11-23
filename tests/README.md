@@ -178,6 +178,14 @@ circuit-id, the port name, and port `c2` a configured one.
 
 Topology: bridged
 
+### chaddr
+
+A request with a client hardware address that is not the Ethernet source
+address of the frame is dropped from port `c1`, and relayed from the
+trusted port `c2`.  Neither adds the address to the FDB.
+
+Topology: bridged
+
 ### flood
 
 A request on port `c1` is relayed once, and not flooded to port `c2`.

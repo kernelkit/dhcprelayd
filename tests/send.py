@@ -5,8 +5,10 @@
 #   send.py DST OP [KEY=VALUE ...]
 #
 # DST is the destination address and OP 1 for a request, 2 for a reply.
-# Keys: ciaddr, yiaddr, giaddr, chaddr, flags, sport, opts (options as
-# hex, after the cookie) and size (cut the message to this many bytes).
+# Keys: ciaddr, yiaddr, giaddr, chaddr (default the address of eth0),
+# flags, sport, opts (options as hex, after the cookie) and size (cut
+# the message to this many bytes).
+import fcntl
 import socket
 import struct
 import sys
@@ -19,7 +21,12 @@ def addr(key):
     return socket.inet_aton(kw.get(key, '0.0.0.0'))
 
 
-chaddr = bytes.fromhex(kw.get('chaddr', '02:00:00:00:00:01').replace(':', ''))
+sd = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+if 'chaddr' in kw:
+    chaddr = bytes.fromhex(kw['chaddr'].replace(':', ''))
+else:
+    SIOCGIFHWADDR = 0x8927
+    chaddr = fcntl.ioctl(sd, SIOCGIFHWADDR, struct.pack('256s', b'eth0'))[18:24]
 msg = struct.pack('!BBBBIHH', op, 1, 6, 0, 0x1234, 0, int(kw.get('flags', '0'), 0))
 msg += addr('ciaddr') + addr('yiaddr') + bytes(4) + addr('giaddr')
 msg += chaddr.ljust(16, b'\0') + bytes(64 + 128)
@@ -27,7 +34,6 @@ msg += bytes.fromhex('63825363' + kw.get('opts', ''))
 if 'size' in kw:
     msg = msg[:int(kw['size'])]
 
-sd = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sd.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 sd.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 sd.setsockopt(socket.SOL_SOCKET, socket.SO_BINDTODEVICE, b'eth0')

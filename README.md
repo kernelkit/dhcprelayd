@@ -71,7 +71,9 @@ that adds option 82, is set as `trusted`.  Requests from it keep the
 option 82 they have, whatever the `policy`.  That includes requests
 already relayed by another relay agent, with `giaddr` set, which are
 forwarded as they are.  From all other interfaces and ports such
-requests are dropped, a client could send them too.
+requests are dropped, a client could send them too.  So is a request
+with a client hardware address that is not the Ethernet source address
+of the frame.
 
 
 Getting started
@@ -157,7 +159,8 @@ least one is required
     global ones
   * **trusted** - `true` where another relay agent, or a switch that
     adds option 82, is connected: option 82 in a request is kept, and
-    requests already relayed by another relay agent are forwarded.
+    requests already relayed by another relay agent are forwarded, and
+    the client hardware address is not checked against the sender's.
     Default `false`, the `policy` applies and relayed requests are
     dropped.  For all ports of the interface, unless set per port
   * **port NAME { }** - bridge port to relay requests from.  Without

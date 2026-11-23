@@ -48,7 +48,7 @@ echo "c1 got $(lease c1), expected 10.0.0.42"
 print "Policy replace, two option 82 ..."
 new=$(server_count "tags: .*new")
 old=$(server_count "tags: .*old")
-send c1 255.255.255.255 1 chaddr=02:00:00:00:00:02 opts=$TWICE
+send c1 255.255.255.255 1 opts=$TWICE
 new=$(($(server_count "tags: .*new") - new))
 old=$(($(server_count "tags: .*old") - old))
 echo "Server got $new requests with circuit-id c1 and $old with old, expected 1 and 0"
