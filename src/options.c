@@ -210,7 +210,6 @@ size_t add_options(struct dhcp_packet_with_opts *mess, size_t sz, int ifindex, s
 	if (sz < (size_t)(start - (unsigned char *)mess) || memcmp(mess->options, &cookie, sizeof(cookie)))
 		return sz;
 
-	/* Never more than one option 82 */
 	sz = remove_options(mess, sz);
 
 	p = option_find(start, (unsigned char *)mess + sz, OPTION_END);
@@ -238,24 +237,24 @@ int has_option82(struct dhcp_packet_with_opts *mess, size_t sz)
 	return find_option82(mess, sz) != NULL;
 }
 
-/* Remove option 82, returns the new size of the message */
+/* Remove every option 82, returns the new size of the message */
 size_t remove_options(struct dhcp_packet_with_opts *mess, size_t sz)
 {
-	unsigned char *end = (unsigned char *)mess + sz;
+	size_t len, orig = sz;
 	unsigned char *opt;
-	size_t len;
 
-	opt = find_option82(mess, sz);
-	if (!opt)
-		return sz;
+	while ((opt = find_option82(mess, sz))) {
+		unsigned char *end = (unsigned char *)mess + sz;
 
-	len = option_len(opt) + 2;
-	memmove(opt, opt + len, end - opt - len);
-	memset(end - len, 0, len);
+		len = option_len(opt) + 2;
+		memmove(opt, opt + len, end - opt - len);
+		memset(end - len, 0, len);
+		sz -= len;
+	}
 
 	/* Keep the zero padding up to the BOOTP minimum size */
-	if (sz - len < MIN_PACKETSZ)
-		return sz < MIN_PACKETSZ ? sz : MIN_PACKETSZ;
+	if (sz < MIN_PACKETSZ)
+		return orig < MIN_PACKETSZ ? orig : MIN_PACKETSZ;
 
-	return sz - len;
+	return sz;
 }

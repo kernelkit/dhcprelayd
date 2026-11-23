@@ -51,6 +51,8 @@ All notable changes to the project are documented in this file.
   BOOTP header, or with the end option beyond 548 bytes
 - With option 82 enabled, a request with a pad option lost the options
   after it
+- With two option 82 in a request only the first was removed, so with
+  policy `replace` a client could still pick its own circuit-id
 - A reply for another relay agent, with the broadcast flag set, crashed
   the relay agent
 - Replies were relayed from any host, so a host that could reach a

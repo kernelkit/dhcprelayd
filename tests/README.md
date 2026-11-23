@@ -163,8 +163,10 @@ Topology: routed
 ### policy
 
 A client sends its own option 82, circuit-id `old`.  With policy
-`replace` the client gets the address for circuit-id `c1`, with `keep`
-the address for `old`, and with `drop` the server gets no request.
+`replace` the client gets the address for circuit-id `c1`, and a request
+with two option 82 reaches the server with only the relay agent's.  With
+`keep` the client gets the address for `old`, and with `drop` the server
+gets no request.
 
 Topology: routed
 

@@ -2,7 +2,8 @@
 # Verify the option 82 policy for requests from a client that already
 # carry option 82, here circuit-id "old":
 #
-#  - replace: our option 82 replaces the client's, circuit-id "c1"
+#  - replace: our option 82 replaces the client's, circuit-id "c1",
+#             also when the client sends two option 82
 #  - keep:    the client's option 82 is forwarded, circuit-id "old"
 #  - drop:    the request is not relayed
 #
@@ -11,8 +12,13 @@
 # shellcheck source=/dev/null
 . "$(dirname "$0")/lib.sh"
 
-# Option 82 with sub-option 1, circuit-id, length 3, "old"
-OPT82="0x52:01036f6c64"
+check_dep python3
+
+# Sub-option 1, circuit-id, length 3, "old"
+SUB=01036f6c64
+OPT82="0x52:$SUB"
+# DISCOVER with that option 82 two times, see send.py
+TWICE="3501015205${SUB}5205${SUB}ff"
 
 print "Creating world ..."
 topo routed
@@ -38,6 +44,15 @@ print "Policy replace ..."
 client c1 -x "$OPT82" || { show_logs; FAIL "No lease with policy replace"; }
 echo "c1 got $(lease c1), expected 10.0.0.42"
 [ "$(lease c1)" = "10.0.0.42" ] || { show_logs; FAIL; }
+
+print "Policy replace, two option 82 ..."
+new=$(server_count "tags: .*new")
+old=$(server_count "tags: .*old")
+send c1 255.255.255.255 1 chaddr=02:00:00:00:00:02 opts=$TWICE
+new=$(($(server_count "tags: .*new") - new))
+old=$(($(server_count "tags: .*old") - old))
+echo "Server got $new requests with circuit-id c1 and $old with old, expected 1 and 0"
+if [ "$new" -ne 1 ] || [ "$old" -ne 0 ]; then show_logs; FAIL; fi
 
 print "Policy keep ..."
 reload config keep
