@@ -33,6 +33,10 @@
 
 #include "conf.h"
 #include "logging.h"
+#include "misc.h"
+
+/* What is waited for is logged as debug on a read to see if it has shown up */
+static int waitlevel;
 
 static int parse_policy(cfg_t *cfg, cfg_opt_t *opt, const char *value, void *result)
 {
@@ -319,6 +323,7 @@ static conf_iface_t *add_iface(conf_group_t *group, int ifindex, int trusted)
 	TAILQ_INSERT_TAIL(&group->iface_list, iface, link);
 	iface->group = group;
 	iface->ifindex = ifindex;
+	iface->bridged = iface_is_bridged(ifindex);
 	iface->trusted = trusted;
 
 	return iface;
@@ -374,8 +379,8 @@ static int read_ports(cfg_t *cfg, conf_t *conf, conf_group_t *group)
 
 		ifindex = if_nametoindex(cfg_title(sec));
 		if (!ifindex) {
-			syslog2(LOG_ERR, "Unknown interface %s", cfg_title(sec));
-			return 1;
+			syslog2(waitlevel, "No port %s yet, waiting for it", cfg_title(sec));
+			continue;
 		}
 
 		iface = add_iface(group, ifindex, is_set(sec, "trusted") ? (int)cfg_getbool(sec, "trusted") : trusted);
@@ -423,7 +428,25 @@ static int read_interface(cfg_t *sec, conf_t *conf, struct ifaddrs *ifap)
 {
 	const char *ifname = cfg_title(sec);
 	const char *giaddr = cfg_getstr(sec, "giaddr");
+	unsigned int ifindex = if_nametoindex(ifname);
 	conf_group_t *group;
+	int addr;
+
+	if (!cfg_size(sec, "server") && TAILQ_EMPTY(&conf->server_list)) {
+		syslog2(LOG_ERR, "No server for interface %s", ifname);
+		return 1;
+	}
+
+	if (!ifindex) {
+		syslog2(waitlevel, "No interface %s yet, waiting for it", ifname);
+		return 0;
+	}
+	if (strcmp(giaddr, "auto"))
+		inet_pton(AF_INET, giaddr, &addr);
+	else if (find_giaddr(ifap, ifname, &addr)) {
+		syslog2(waitlevel, "No IPv4 address on %s yet to use as giaddr, waiting for one", ifname);
+		return 0;
+	}
 
 	group = calloc(1, sizeof(*group));
 	if (!group) {
@@ -434,30 +457,11 @@ static int read_interface(cfg_t *sec, conf_t *conf, struct ifaddrs *ifap)
 	TAILQ_INIT(&group->server_list);
 	TAILQ_INSERT_TAIL(&conf->group_list, group, link);
 
-	group->ifindex = if_nametoindex(ifname);
-	if (!group->ifindex) {
-		syslog2(LOG_ERR, "Unknown interface %s", ifname);
-		return 1;
-	}
-
-	if (strcmp(giaddr, "auto"))
-		inet_pton(AF_INET, giaddr, &group->giaddr);
-	else if (find_giaddr(ifap, ifname, &group->giaddr)) {
-		syslog2(LOG_ERR, "No IPv4 address on %s to use as giaddr", ifname);
-		return 1;
-	}
-
+	group->ifindex = ifindex;
+	group->giaddr = addr;
 	group->option82 = cfg_getbool(sec, "option82");
 
-	if (read_ports(sec, conf, group) || read_servers(sec, &group->server_list))
-		return 1;
-
-	if (TAILQ_EMPTY(&group->server_list) && TAILQ_EMPTY(&conf->server_list)) {
-		syslog2(LOG_ERR, "No server for interface %s", ifname);
-		return 1;
-	}
-
-	return 0;
+	return read_ports(sec, conf, group) || read_servers(sec, &group->server_list);
 }
 
 static int read_interfaces(cfg_t *cfg, conf_t *conf)
@@ -519,11 +523,13 @@ static int check_servers(conf_t *conf)
 	return 0;
 }
 
-conf_t *conf_read(const char *file)
+conf_t *conf_read(const char *file, int quiet)
 {
 	conf_t *conf;
 	cfg_t *cfg;
 	int rc = 1;
+
+	waitlevel = quiet ? LOG_DEBUG : LOG_NOTICE;
 
 	conf = calloc(1, sizeof(*conf));
 	if (!conf) {
@@ -577,6 +583,28 @@ done:
 	}
 
 	return conf;
+}
+
+/* Same interfaces, addresses and ports, for two reads of the same file */
+int conf_same(conf_t *a, conf_t *b)
+{
+	conf_group_t *ga = TAILQ_FIRST(&a->group_list), *gb = TAILQ_FIRST(&b->group_list);
+
+	for (; ga && gb; ga = TAILQ_NEXT(ga, link), gb = TAILQ_NEXT(gb, link)) {
+		conf_iface_t *ia = TAILQ_FIRST(&ga->iface_list), *ib = TAILQ_FIRST(&gb->iface_list);
+
+		if (ga->ifindex != gb->ifindex || ga->giaddr != gb->giaddr)
+			return 0;
+
+		for (; ia && ib; ia = TAILQ_NEXT(ia, link), ib = TAILQ_NEXT(ib, link)) {
+			if (ia->ifindex != ib->ifindex || ia->vid != ib->vid || ia->bridged != ib->bridged)
+				return 0;
+		}
+		if (ia || ib)
+			return 0;
+	}
+
+	return !ga && !gb;
 }
 
 void conf_free(conf_t *conf)

@@ -27,6 +27,8 @@
 #include <linux/ip.h>
 #include <linux/filter.h>
 #include <linux/udp.h>
+#include <linux/netlink.h>
+#include <linux/rtnetlink.h>
 #include <net/if.h>
 #include <arpa/inet.h>
 #include <ev.h>
@@ -45,6 +47,8 @@ static ev_signal sigquit_watcher;
 static ev_signal sigterm_watcher;
 
 static ev_io io_upstreams_separate_listen;
+static ev_io io_netlink;
+static ev_timer netlink_timer;
 
 static char config_file[128] = "/etc/dhcprelayd.conf";
 
@@ -389,11 +393,8 @@ static void cleanup(struct ev_loop *loop)
 		}
 
 		TAILQ_FOREACH(iface, &group->iface_list, link) {
-			char ifname[IFNAMSIZ];
-
-			if_indextoname(iface->ifindex, ifname);
 			ev_io_stop(loop, &iface->io);
-			syslog2(LOG_DEBUG, "clean-up interface %s\n", ifname);
+			syslog2(LOG_DEBUG, "clean-up ifindex %d", iface->ifindex);
 			if (iface->sd > 0) {
 				close(iface->sd);
 				iface->sd = 0;
@@ -441,7 +442,7 @@ static void sigcb(struct ev_loop *loop, ev_signal *w, int rev __attribute__ ((un
 
 	switch (w->signum) {
 	case SIGHUP:
-		cfg = conf_read(config_file);
+		cfg = conf_read(config_file, 0);
 		if (!cfg) {
 			syslog2(LOG_ERR, "Failed reading configuration file %s, keeping the old one", config_file);
 			break;
@@ -457,6 +458,60 @@ static void sigcb(struct ev_loop *loop, ev_signal *w, int rev __attribute__ ((un
 		ev_break(loop, EVBREAK_ALL);
 		break;
 	}
+}
+
+/* Interfaces and addresses have settled, relay from the ones that changed */
+static void netlink_timer_cb(struct ev_loop *loop, ev_timer *w, int revents __attribute__ ((unused)))
+{
+	conf_t *cfg;
+
+	ev_timer_stop(loop, w);
+	cfg = conf_read(config_file, 1);
+	if (!cfg)
+		return;
+
+	if (conf_same(cfg, ev_userdata(loop))) {
+		conf_free(cfg);
+		return;
+	}
+
+	syslog2(LOG_INFO, "Interfaces or addresses changed, reloading");
+	if (init(loop, cfg)) {
+		status = 1;
+		ev_break(loop, EVBREAK_ALL);
+	}
+}
+
+static void netlink_cb(struct ev_loop *loop, ev_io *w, int revents __attribute__ ((unused)))
+{
+	char buf[4096];
+
+	while (recv(w->fd, buf, sizeof(buf), MSG_DONTWAIT) > 0)
+		;
+
+	ev_timer_again(loop, &netlink_timer);
+}
+
+/* Link and IPv4 address events, for interfaces that show up or change after start */
+static int init_netlink(struct ev_loop *loop)
+{
+	struct sockaddr_nl sa = {
+		.nl_family = AF_NETLINK,
+		.nl_groups = RTMGRP_LINK | RTMGRP_IPV4_IFADDR,
+	};
+	int sd;
+
+	sd = socket(AF_NETLINK, SOCK_RAW | SOCK_CLOEXEC, NETLINK_ROUTE);
+	if (sd == -1 || bind(sd, (struct sockaddr *)&sa, sizeof(sa))) {
+		syslog2(LOG_ERR, "Failed setting up netlink socket: %m");
+		return 1;
+	}
+
+	ev_timer_init(&netlink_timer, netlink_timer_cb, 0., 1.);
+	ev_io_init(&io_netlink, netlink_cb, sd, EV_READ);
+	ev_io_start(loop, &io_netlink);
+
+	return 0;
 }
 
 static struct ev_loop *init_signals(struct ev_loop *loop)
@@ -531,11 +586,11 @@ int main(int argc, char **argv)
 
 	init_signals(loop);
 
-	cfg = conf_read(config_file);
+	cfg = conf_read(config_file, 0);
 	if (!cfg) {
 		syslog2(LOG_ERR, "Failed reading configuration file %s", config_file);
 		status = 1;
-	} else if (init(loop, cfg))
+	} else if (init(loop, cfg) || init_netlink(loop))
 		status = 1;
 	else
 		ev_run(loop, 0);

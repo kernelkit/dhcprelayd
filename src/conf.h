@@ -39,6 +39,7 @@ typedef struct conf_iface_t {
 	struct conf_group_t *group;
 	int ifindex;
 	int vid;		/* VLAN of tagged requests, 0 for untagged */
+	int bridged;
 
 	char circuit_id[OPT82_ID_LEN];
 	int circuit_id_len;
@@ -87,6 +88,7 @@ typedef struct conf_t {
 	int udp_listen_port;
 } conf_t;
 
-conf_t *conf_read(const char *file);
+conf_t *conf_read(const char *file, int quiet);
+int conf_same(conf_t *a, conf_t *b);
 void conf_free(conf_t *cfg);
 #endif

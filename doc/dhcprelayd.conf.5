@@ -5,8 +5,8 @@ dhcprelayd.conf \- configuration file for the dhcprelayd DHCP relay agent
 .I /etc/dhcprelayd.conf
 .SH DESCRIPTION
 .BR dhcprelayd (8)
-reads its configuration from this file at startup and on SIGHUP.  The
-file has
+reads its configuration from this file at startup, on SIGHUP, and when
+interfaces or their addresses change.  The file has
 .B key = value
 settings, and sections with a keyword, a name, and a body in braces:
 .PP
@@ -105,7 +105,10 @@ and
 .TP
 .BI interface " name " { " ... " }
 Relay requests received on this interface.  At least one is required.
-The interface must exist when the file is read.
+The interface need not exist when the file is read, requests are relayed
+from it when it shows up, and with
+.B giaddr auto
+when it has an IPv4 address.  The same goes for its ports.
 .RS
 .TP
 .BI giaddr " = " auto \fR|\fI address

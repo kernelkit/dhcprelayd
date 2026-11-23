@@ -32,6 +32,11 @@ All notable changes to the project are documented in this file.
   relayed by another relay agent, with giaddr set, are now dropped from
   all other interfaces and ports.  They were forwarded with the option
   82 they had, so a client could pick its own circuit-id that way
+- An interface or port that does not exist, or an interface without an
+  IPv4 address, is no longer an error.  The relay agent starts and
+  relays from it when it shows up or gets its address, e.g. from a DHCP
+  client.  It also follows address changes and ports added to or removed
+  from a bridge
 - New `port` setting `tagged`, for a trunk port.  Requests tagged with
   the VLAN of the interface are relayed, so the port can be listed under
   several interfaces, one for each VLAN.  Tagged requests on a port

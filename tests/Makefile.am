@@ -1,4 +1,4 @@
-EXTRA_DIST           = README.md lib.sh send.py basic.sh bridge.sh chaddr.sh flood.sh forged.sh giaddr.sh hex.sh invalid.sh length.sh local.sh malformed.sh option82.sh policy.sh reload.sh reply.sh samenet.sh trusted.sh trunk.sh
+EXTRA_DIST           = README.md lib.sh send.py basic.sh bridge.sh chaddr.sh flood.sh forged.sh giaddr.sh hex.sh invalid.sh length.sh local.sh malformed.sh option82.sh policy.sh reload.sh reply.sh samenet.sh trusted.sh trunk.sh wait.sh
 CLEANFILES           = *~ *.trs *.log
 TEST_EXTENSIONS      = .sh
 TESTS_ENVIRONMENT    = unshare -mrun --map-auto
@@ -22,3 +22,4 @@ TESTS               += reply.sh
 TESTS               += samenet.sh
 TESTS               += trusted.sh
 TESTS               += trunk.sh
+TESTS               += wait.sh

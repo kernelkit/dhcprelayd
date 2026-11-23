@@ -45,7 +45,7 @@ static char *mac_ntoa(unsigned char *ptr)
 	return (address);
 }
 
-static int iface_is_bridged(int ifindex)
+int iface_is_bridged(int ifindex)
 {
 	char ifname[IF_NAMESIZE], path[sizeof("/sys/class/net//brport") + IF_NAMESIZE];
 
@@ -90,15 +90,15 @@ static int nl_req(void *req, size_t len)
 }
 
 /*
- * Rule for bridge port @ifindex in the nft script @fp, returns 0 if it
- * is not a bridge port.  Only requests, op 1 first in the UDP payload,
- * the replies from a server behind the port are for the UDP socket.
+ * Rule for bridge port @iface in the nft script @fp.  Only requests,
+ * op 1 first in the UDP payload, the replies from a server behind the
+ * port are for the UDP socket.
  */
-static int nft_drop(FILE *fp, int ifindex, const char *match)
+static int nft_drop(FILE *fp, conf_iface_t *iface, const char *match)
 {
 	char ifname[IFNAMSIZ];
 
-	if (!iface_is_bridged(ifindex) || !if_indextoname(ifindex, ifname))
+	if (!iface->bridged || !if_indextoname(iface->ifindex, ifname))
 		return 0;
 
 	if (strchr(ifname, '"')) {
@@ -137,14 +137,14 @@ int setup_nftables(conf_t *cfg)
 	fprintf(fp, "chain " NFT_IN_CHAIN " {\n type filter hook input priority -200\n");
 	TAILQ_FOREACH(group, &cfg->group_list, link) {
 		TAILQ_FOREACH(iface, &group->iface_list, link)
-			anybridged |= nft_drop(fp, iface->ifindex, "");
+			anybridged |= nft_drop(fp, iface, "");
 	}
 	fprintf(fp, "}\n");
 
 	fprintf(fp, "chain " NFT_FWD_CHAIN " {\n type filter hook forward priority -200\n");
 	TAILQ_FOREACH(group, &cfg->group_list, link) {
 		TAILQ_FOREACH(iface, &group->iface_list, link)
-			anybridged |= nft_drop(fp, iface->ifindex, "pkttype broadcast ");
+			anybridged |= nft_drop(fp, iface, "pkttype broadcast ");
 	}
 	fprintf(fp, "}\n}");
 
@@ -168,10 +168,8 @@ int cleanup_nftables(conf_t *cfg)
 
 	TAILQ_FOREACH(group, &cfg->group_list, link) {
 		conf_iface_t *iface;
-		TAILQ_FOREACH(iface, &group->iface_list, link) {
-			if (iface_is_bridged(iface->ifindex))
-				anybridged = 1;
-		}
+		TAILQ_FOREACH(iface, &group->iface_list, link)
+			anybridged |= iface->bridged;
 	}
 
 	if (anybridged) {

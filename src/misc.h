@@ -20,6 +20,7 @@
 #define __MISC_H__
 #include "conf.h"
 
+int iface_is_bridged(int ifindex);
 int setup_nftables(conf_t *cfg);
 int cleanup_nftables(conf_t *cfg);
 int add_arp_entry(int ifindex, unsigned char *mac, struct sockaddr_in saddr);
