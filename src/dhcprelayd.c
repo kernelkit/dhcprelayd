@@ -280,7 +280,7 @@ static int setup_socket_udp_separate_listen(struct ev_loop *loop, conf_t *cfg)
 	if (udp_listen_port == DHCP_SERVER_PORT)
 		return 0;
 
-	sd_separate_in = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, IPPROTO_UDP);
+	sd_separate_in = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_UDP);
 	if (sd_separate_in == -1) {
 		perror("Unable to create in socket");
 		return 1;
@@ -329,7 +329,7 @@ static int setup_sockets_udp(struct ev_loop *loop, conf_t *cfg)
 			.sin_addr.s_addr = group->giaddr,
 		};
 
-		group->sd = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, IPPROTO_UDP);
+		group->sd = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_UDP);
 		if (group->sd == -1) {
 			syslog2(LOG_ERR, "Failed creating UDP socket: %m");
 			return 1;
