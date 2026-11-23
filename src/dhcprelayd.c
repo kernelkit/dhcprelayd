@@ -111,9 +111,8 @@ static struct dhcp_packet_with_opts *packet_rcv_raw(int sd, unsigned char *buf, 
 {
 	struct sockaddr_ll sl;
 	struct ethhdr *eth_hdr = (struct ethhdr *)buf;
-	struct iphdr *ip_hdr = (struct iphdr *)((char *)eth_hdr + (sizeof(struct ethhdr)));
 	struct udphdr *udp;
-	int dport, hlen, ulen;
+	int hlen, ulen;
 
 	socklen_t salen = sizeof sl;
 
@@ -133,23 +132,18 @@ static struct dhcp_packet_with_opts *packet_rcv_raw(int sd, unsigned char *buf, 
 		return NULL;
 	}
 
-	hlen = sizeof(struct ethhdr) + 4 * ip_hdr->ihl;
+	/* The filter only passes IPv4 without options */
+	hlen = sizeof(struct ethhdr) + sizeof(struct iphdr);
 	if (*len < hlen + (int)sizeof(struct udphdr)) {
-		syslog2(LOG_NOTICE, "Received truncated raw packet (%d bytes).", *len);
+		syslog2(LOG_DEBUG, "Received truncated raw packet (%d bytes).", *len);
 		return NULL;
 	}
 
 	udp = (struct udphdr *)(buf + hlen);
-	dport = ntohs(udp->dest);
-
-	if (dport != 67 && dport != 68) {
-		syslog2(LOG_NOTICE, "Received raw packet with invalid destination port (%d).", dport);
-		return NULL;
-	}
 
 	ulen = ntohs(udp->len);
 	if (ulen < (int)sizeof(struct udphdr) || hlen + ulen > *len) {
-		syslog2(LOG_NOTICE, "Received raw packet with invalid UDP length (%d).", ulen);
+		syslog2(LOG_DEBUG, "Received raw packet with invalid UDP length (%d).", ulen);
 		return NULL;
 	}
 	*len = ulen - sizeof(struct udphdr);
@@ -207,33 +201,30 @@ static void packet_cb_upstream(struct ev_loop *loop, ev_io *w, int revents __att
 	udp_recv(loop, w, 1);
 }
 
-/*
-sudo tcpdump -dd -s0 -i enx0080c83bb148 "ether[12] == 0x08 && ether[13] == 0x00 
-&& ether[23]==17 && ether[36] == 00 && ether[37] == 67"
- */
-int add_filter(int sd)
+/* UDP to port 67 in an IPv4 packet without options, that is not a fragment */
+static int add_filter(int sd)
 {
 	struct sock_fprog fprog;
 
 	static struct sock_filter filter[] = {
-		{0x30, 0, 0, 0x0000000c},
-		{0x15, 0, 9, 0x00000008},
-		{0x30, 0, 0, 0x0000000d},
-		{0x15, 0, 7, 0x00000000},
-		{0x30, 0, 0, 0x00000017},
-		{0x15, 0, 5, 0x00000011},
-		{0x30, 0, 0, 0x00000024},
-		{0x15, 0, 3, 0x00000000},
-		{0x30, 0, 0, 0x00000025},
-		{0x15, 0, 1, 0x00000043},
-		{0x6, 0, 0, 0x00040000},
-		{0x6, 0, 0, 0x00000000},
+		BPF_STMT(BPF_LD | BPF_H | BPF_ABS, 12),
+		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, ETH_P_IP, 0, 9),
+		BPF_STMT(BPF_LD | BPF_B | BPF_ABS, 14),
+		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, 0x45, 0, 7),
+		BPF_STMT(BPF_LD | BPF_H | BPF_ABS, 20),
+		BPF_JUMP(BPF_JMP | BPF_JSET | BPF_K, 0x3fff, 5, 0),
+		BPF_STMT(BPF_LD | BPF_B | BPF_ABS, 23),
+		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, IPPROTO_UDP, 0, 3),
+		BPF_STMT(BPF_LD | BPF_H | BPF_ABS, 36),
+		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, DHCP_SERVER_PORT, 0, 1),
+		BPF_STMT(BPF_RET | BPF_K, 0x40000),
+		BPF_STMT(BPF_RET | BPF_K, 0),
 	};
 	fprog.len = sizeof filter / sizeof(filter[0]);
 	fprog.filter = filter;
 
 	if ((setsockopt(sd, SOL_SOCKET, SO_ATTACH_FILTER, &fprog, sizeof(fprog))) < 0) {
-		syslog2(LOG_WARNING, "Failed to set socket filter.");
+		syslog2(LOG_ERR, "Failed to set socket filter: %m");
 		return 1;
 	}
 	return 0;
@@ -245,10 +236,10 @@ static int bind_to_interface(int sd, int ifindex)
 
 	bzero(&sll, sizeof(sll));
 	sll.sll_family = AF_PACKET;
+	sll.sll_protocol = htons(ETH_P_ALL);
 	sll.sll_ifindex = ifindex;
-	sll.sll_pkttype = PACKET_BROADCAST;
 	if ((bind(sd, (struct sockaddr *)&sll, sizeof(sll))) == -1) {
-		syslog2(LOG_WARNING, "Failed to bind socket to interface.");
+		syslog2(LOG_ERR, "Failed to bind socket to interface: %m");
 		return 1;
 	}
 	return 0;
@@ -261,15 +252,14 @@ static int setup_sockets_raw(struct ev_loop *loop, conf_t *cfg)
 
 	TAILQ_FOREACH(group, &cfg->group_list, link) {
 		TAILQ_FOREACH(iface, &group->iface_list, link) {
-			int index = iface->ifindex;
-
-			iface->sd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+			/* No protocol, nothing is received before the filter and the bind */
+			iface->sd = socket(AF_PACKET, SOCK_RAW | SOCK_CLOEXEC, 0);
 			if (iface->sd == -1) {
-				perror("Unable to create in socket");
+				syslog2(LOG_ERR, "Failed creating raw socket: %m");
 				return 1;
 			}
-			add_filter(iface->sd);
-			bind_to_interface(iface->sd, index);
+			if (add_filter(iface->sd) || bind_to_interface(iface->sd, iface->ifindex))
+				return 1;
 			ev_io_init(&iface->io, packet_cb_raw, iface->sd, EV_READ);
 			ev_io_start(loop, &iface->io);
 		}
