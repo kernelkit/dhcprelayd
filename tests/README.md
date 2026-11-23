@@ -23,10 +23,11 @@ The following tools must be in `$PATH`:
   - `nft`: nftables, used by dhcprelayd on bridge ports
   - `tcpdump`: to check what is sent on the wire
   - `stdbuf`: coreutils
+  - `python3`: sends the malformed and forged messages, see `send.py`
 
 On Debian and Ubuntu:
 
-    sudo apt install iproute2 util-linux dnsmasq-base busybox nftables tcpdump
+    sudo apt install iproute2 util-linux dnsmasq-base busybox nftables tcpdump python3
 
 The `dnsmasq-base` package has the binary without the system service.
 A test that lacks a tool exits with 77 and is reported as SKIP.
@@ -131,6 +132,16 @@ clients on ports `c1` and `c2` each get the static address the server
 has for their port.
 
 Topology: bridged
+
+### malformed
+
+Requests that crashed the relay agent with option 82 enabled: without
+the end option, cut off in the BOOTP header, and with the end option
+beyond 548 bytes.  The relay agent keeps running, the long request gets
+option 82, and a request with a pad option between two options reaches
+the server with both.
+
+Topology: routed
 
 ### option82
 

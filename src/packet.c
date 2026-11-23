@@ -132,8 +132,13 @@ static int handle_request(conf_t *cfg, struct dhcp_packet *packet, int ifindex, 
 		/* plug in our address */
 
 		addr.s_addr = packet->giaddr.s_addr = group->giaddr;
-		if (add)
+		if (add) {
 			sz = add_options(mess, sz, ifindex, addr, group, cfg);
+			if (!sz) {
+				syslog2(LOG_NOTICE, "Dropping malformed request on ifindex %d", ifindex);
+				return 0;
+			}
+		}
 	}
 
 	if (!TAILQ_EMPTY(&group->server_list)) {
@@ -236,6 +241,9 @@ int handle_reply(conf_t *cfg, struct dhcp_packet *packet, int ifindex, ssize_t s
 
 int handle_packet(conf_t *cfg, struct dhcp_packet *packet, ssize_t sz, int ifindex, int sd)
 {
+	if (sz < (ssize_t)sizeof(*packet))
+		return 1;
+
 	/* rfc1542 says discard if > 16 */
 	if ((packet->hops++) > 16)
 		return 1;

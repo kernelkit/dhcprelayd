@@ -165,7 +165,7 @@ static void packet_cb_raw(struct ev_loop *loop __attribute__ ((unused)), ev_io *
 	ev_io_stop(loop, w);
 
 	/* Replies are read from the UDP socket */
-	packet = packet_rcv_raw(w->fd, buf, sizeof(buf), &len, &ifindex);
+	packet = packet_rcv_raw(w->fd, buf, sizeof(buf) - DHCP_HEADROOM, &len, &ifindex);
 	if (packet && packet->header.op == BOOTREQUEST)
 		handle_packet(cfg, &packet->header, len, ifindex, -1);
 
@@ -182,7 +182,7 @@ static void udp_recv(struct ev_loop *loop, ev_io *w, int replies_only)
 
 	ev_io_stop(loop, w);
 
-	packet = packet_rcv_udp(w->fd, buf, sizeof(buf), &len, &ifindex);
+	packet = packet_rcv_udp(w->fd, buf, sizeof(buf) - DHCP_HEADROOM, &len, &ifindex);
 	if (packet && (!replies_only || packet->header.op == BOOTREPLY))
 		handle_packet(cfg, &packet->header, len, ifindex, w->fd);
 	ev_io_start(loop, w);

@@ -25,8 +25,7 @@
 
 #define MIN_PACKETSZ      300
 #define DHCP_PACKET_MAX   16384	/* hard limit on DHCP packet size */
-
-#define INADDRSZ          4
+#define DHCP_HEADROOM     300	/* buffer after a received message, for option 82 */
 
 #define DHCP_CHADDR_MAX  16
 #define DHCP_SERVER_PORT 67

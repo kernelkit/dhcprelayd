@@ -170,10 +170,7 @@ reload()
     "$func" "$@"
     kill -HUP "$(cat "$DIR/relay.pid")"
     sleep 1
-    kill -0 "$(cat "$DIR/relay.pid")" 2>/dev/null || {
-	show_logs
-	FAIL "Relay agent died on reload"
-    }
+    alive "on reload"
 }
 
 # Request a lease with udhcpc in netns $1, the address is saved in
@@ -197,6 +194,24 @@ client()
     nsrun "$ns" busybox udhcpc -f -q -n -t 3 -T 2 -i eth0 -s "$DIR/$ns.sh" "$@"
     [ -s "$DIR/$ns.lease" ] || return 1
     echo "$ns got lease $(cat "$DIR/$ns.lease")"
+}
+
+# Send a hand made DHCP message from netns $1, see send.py
+send()
+{
+    ns=$1
+    shift
+    nsrun "$ns" python3 "$(dirname "$0")/send.py" "$@"
+    sleep 0.3
+}
+
+# Fail unless the relay agent is still running
+alive()
+{
+    kill -0 "$(cat "$DIR/relay.pid")" 2>/dev/null || {
+	show_logs
+	FAIL "Relay agent died${1:+ $1}"
+    }
 }
 
 # Print the address leased to netns $1

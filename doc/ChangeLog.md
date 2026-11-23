@@ -46,6 +46,11 @@ All notable changes to the project are documented in this file.
   it is rejected and the relay agent keeps running with the old one
 - With `remote-id-type giaddr` the remote-id was `0.0.0.0`, unless
   `force-server-identity` was also set
+- With option 82 enabled, one malformed request from a client crashed
+  the relay agent: a request without the end option, shorter than the
+  BOOTP header, or with the end option beyond 548 bytes
+- With option 82 enabled, a request with a pad option lost the options
+  after it
 
 [v2.1][] - 2018-06-11
 ---------------------

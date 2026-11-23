@@ -33,20 +33,13 @@
 #include "packet.h"
 #include "logging.h"
 
-#define option_bool(x) (0)
-
 #define OPTION_PAD               0
-#define OPTION_OVERLOAD          52
-#define OPTION_MESSAGE_TYPE      53
 #define OPTION_AGENT_ID          82
 #define OPTION_END               255
 
 #define SUBOPT_CIRCUIT_ID        1
 #define SUBOPT_REMOTE_ID         2
 #define SUBOPT_SERVER_OR         11	/* RFC 5107 */
-
-#define DHOPT_ADDR               1
-#define DHOPT_STRING             2
 
 #define MAX_OPTION_SIZE          255
 
@@ -55,56 +48,12 @@
 typedef unsigned int u32;
 
 struct dhcp_opt {
-	int opt, len, flags;
+	int opt, len;
 	unsigned char *val;
 	struct dhcp_opt *next;
 };
 
-/* return length, note this only does the data part */
-static int do_opt(struct dhcp_opt *opt, unsigned char *p)
-{
-	int len = opt->len;
-
-	if (p && len != 0) {
-		if (opt->flags & DHOPT_ADDR) {
-			int j;
-			struct in_addr *a = (struct in_addr *)opt->val;
-
-			for (j = 0; j < opt->len; j += INADDRSZ, a++) {
-				memcpy(p, a, INADDRSZ);
-				p += INADDRSZ;
-			}
-		} else
-			memcpy(p, opt->val ? opt->val : (unsigned char *)"", len);
-	}
-	return len;
-}
-
-static unsigned char *dhcp_skip_opts(unsigned char *start)
-{
-	while (*start != 0)
-		start += start[1] + 2;
-	return start;
-}
-
-static unsigned char *free_space(struct dhcp_packet_with_opts *mess, unsigned char *end, int opt, int len)
-{
-	unsigned char *p = dhcp_skip_opts(&mess->options[0] + sizeof(u32));
-
-	if (p + len + 3 >= end) {
-		p = NULL;
-		syslog2(LOG_WARNING, "Cannot send DHCP/BOOTP option %d: no space left in packet", opt);
-	}
-
-	if (p) {
-		*(p++) = opt;
-		*(p++) = len;
-	}
-
-	return p;
-}
-
-static unsigned char *option_find1(unsigned char *p, unsigned char *end, int opt, int minsize)
+static unsigned char *option_find(unsigned char *p, unsigned char *end, int opt)
 {
 	while (1) {
 		if (p >= end)
@@ -121,87 +70,42 @@ static unsigned char *option_find1(unsigned char *p, unsigned char *end, int opt
 			opt_len = option_len(p);
 			if (p > end - (2 + opt_len))
 				return NULL;	/* malformed packet */
-			if (*p == opt && opt_len >= minsize)
+			if (*p == opt)
 				return p;
 			p += opt_len + 2;
 		}
 	}
 }
 
-static unsigned char *option_find(struct dhcp_packet_with_opts *mess, size_t size, int opt_type, int minsize)
+/* Add @opt as sub-options of option @encap at @p, returns the new end of the options */
+static unsigned char *encap_opts(struct dhcp_opt *opt, int encap, unsigned char *p, unsigned char *end)
 {
-	unsigned char *ret, *overload;
+	struct dhcp_opt *o;
+	int len = 0;
 
-	/* skip over DHCP cookie; */
-	if ((ret = option_find1(&mess->options[0] + sizeof(u32), ((unsigned char *)mess) + size, opt_type, minsize)))
-		return ret;
-	/* look for overload option. */
-	if (!(overload = option_find1(&mess->options[0] + sizeof(u32), ((unsigned char *)mess) + size, OPTION_OVERLOAD, 1)))
-		return NULL;
-	/* Can we look in filename area ? */
-	if ((overload[2] & 1) && (ret = option_find1(&mess->header.file[0], &mess->header.file[128], opt_type, minsize)))
-		return ret;
-	/* finally try sname area */
-	if ((overload[2] & 2) && (ret = option_find1(&mess->header.sname[0], &mess->header.sname[64], opt_type, minsize)))
-		return ret;
-	return NULL;
-}
+	for (o = opt; o; o = o->next)
+		len += o->len + 2;
 
-
-static size_t dhcp_packet_size(struct dhcp_packet_with_opts *mess, unsigned char *real_end)
-{
-	unsigned char *p = dhcp_skip_opts(&mess->options[0] + sizeof(u32));
-	size_t ret;
-
-	(void)real_end;		/* unused */
-	*p++ = OPTION_END;
-
-	if (option_bool(OPT_LOG_OPTS)) {
-		if (mess->header.siaddr.s_addr != 0)
-			syslog2(LOG_DEBUG, "%u next server: %s", ntohl(mess->header.xid), inet_ntoa(mess->header.siaddr));
-		if ((mess->header.flags & htons(0x8000)) && mess->header.ciaddr.s_addr == 0)
-			syslog2(LOG_DEBUG, "%u broadcast response.", ntohl(mess->header.xid));
+	/* Leave room for OPTION_END */
+	if (len > MAX_OPTION_SIZE || p + 2 + len >= end) {
+		syslog2(LOG_WARNING, "No room for option %d, %d bytes, in request", encap, len);
+		return p;
 	}
 
-	ret = (size_t)(p - (unsigned char *)mess);
+	*p++ = encap;
+	*p++ = len;
+	for (o = opt; o; o = o->next) {
+		*p++ = o->opt;
+		*p++ = o->len;
+		memcpy(p, o->val, o->len);
+		p += o->len;
+	}
 
-	if (ret < MIN_PACKETSZ)
-		ret = MIN_PACKETSZ;
-
-	return ret;
+	return p;
 }
 
-static void encap_opts(struct dhcp_opt *opt, int encap, struct dhcp_packet_with_opts *mess, unsigned char *end)
-{
-	int len, enc_len;
-	struct dhcp_opt *start;
-	unsigned char *p;
-	size_t tot_len;
-
-	/* find size in advance */
-	for (enc_len = 0, start = opt; opt; opt = opt->next) {
-		int new = do_opt(opt, NULL) + 2;
-		if (enc_len + new <= MAX_OPTION_SIZE)
-			enc_len += new;
-		else {
-			syslog2(LOG_WARNING, "Cannot add DHCP/BOOTP option %d: option to large (%d).", opt, new);
-			return;
-		}
-	}
-	
-	tot_len = enc_len;
-	if (enc_len != 0 && (p = free_space(mess, end, encap, tot_len))) {
-		for (; start; start = start->next) {
-			len = do_opt(start, p + 2);
-			*(p++) = start->opt;
-			*(p++) = len;
-			p += len;
-		}
-	}
-}
-
-static void add_option82(struct dhcp_packet_with_opts *mess, unsigned char *end, int ifindex, conf_t *cfg,
-			 conf_iface_t *iface, struct in_addr addr)
+static unsigned char *add_option82(unsigned char *p, unsigned char *end, int ifindex, conf_t *cfg,
+				   conf_iface_t *iface, struct in_addr addr)
 {
 	unsigned char ifname[IF_NAMESIZE];
 	char *giaddr;
@@ -216,7 +120,7 @@ static void add_option82(struct dhcp_packet_with_opts *mess, unsigned char *end,
 	syslog2(LOG_DEBUG, "Adding option 82.");
 
 	if (!if_indextoname(ifindex, (char *)&ifname[0]))
-		return;		/* Report error? */
+		return p;
 
 	opt_rid.opt = SUBOPT_REMOTE_ID;
 
@@ -237,7 +141,6 @@ static void add_option82(struct dhcp_packet_with_opts *mess, unsigned char *end,
 		opt_rid.len = strlen(host);
 		break;
 	}
-	opt_rid.flags = 0;
 	opt_rid.next = NULL;
 
 	opt_cid.opt = SUBOPT_CIRCUIT_ID;
@@ -249,20 +152,18 @@ static void add_option82(struct dhcp_packet_with_opts *mess, unsigned char *end,
 		opt_cid.val = &ifname[0];
 		opt_cid.len = strlen((char *)ifname);
 	}
-	opt_cid.flags = 0;
 	opt_cid.next = &opt_rid;
 
 	if (cfg->force_server_id) {
 		opt_sor.opt = SUBOPT_SERVER_OR;
 		opt_sor.val = (unsigned char *)&addr;
 		opt_sor.len = 4;
-		opt_sor.flags = DHOPT_ADDR;
 		opt_sor.next = &opt_cid;
 		opt_root = &opt_sor;
 	} else
 		opt_root = &opt_cid;
 
-	encap_opts(opt_root, OPTION_AGENT_ID, mess, end);
+	return encap_opts(opt_root, OPTION_AGENT_ID, p, end);
 }
 
 /* Is request from @iface_index allowed? */
@@ -279,12 +180,14 @@ static conf_iface_t *find_iface_cfg(conf_group_t *group, int ifindex)
 	return NULL;
 }
 
+/* Returns the new size of the message, or 0 if it is malformed */
 size_t add_options(struct dhcp_packet_with_opts *mess, size_t sz, int ifindex, struct in_addr addr, conf_group_t *group, conf_t *cfg)
 {
-	unsigned char *tmp, *opt, *end = (unsigned char *)(mess + 1);
-	unsigned char *real_end = (unsigned char *)(mess + 1);
+	unsigned char *start = &mess->options[0] + sizeof(u32);
+	unsigned char *end;
+	u32 cookie = htonl(DHCP_COOKIE);
 	conf_iface_t *iface;
-	int nbytes;
+	unsigned char *p;
 
 	syslog2(LOG_DEBUG, "Adding options");
 
@@ -296,38 +199,38 @@ size_t add_options(struct dhcp_packet_with_opts *mess, size_t sz, int ifindex, s
 		syslog2(LOG_ERR, "Could not find iface configuration for index %d", ifindex);
 		return sz;
 	}
-	if (mess->header.op != BOOTREQUEST)	//|| mess->hlen > DHCP_CHADDR_MAX)
+	if (mess->header.op != BOOTREQUEST)
 		return sz;
 
-	/* Why this? From dnsmasq. Don't add options if hardware type is 0. */
+	/* From dnsmasq, don't add options if hardware type is 0. */
 	if (mess->header.htype == 0 && mess->header.hlen != 0)
 		return sz;
 
-	/* check for DHCP rather than BOOTP */
-	if ((opt = option_find(mess, sz, OPTION_MESSAGE_TYPE, 1))) {
-		u32 cookie = htonl(DHCP_COOKIE);
+	/* BOOTP, no options to add ours to */
+	if (sz < (size_t)(start - (unsigned char *)mess) || memcmp(mess->options, &cookie, sizeof(cookie)))
+		return sz;
 
-		/* only insist on a cookie for DHCP. */
-		if (memcmp(mess->options, &cookie, sizeof(u32)) != 0)
-			return sz;
-	}
 	/* Never more than one option 82 */
 	sz = remove_options(mess, sz);
 
-	/* Find end of options, set rest of mess to 0 to prepare for additional options. */
-	tmp = option_find(mess, sz, OPTION_END, 0);
-	nbytes = end - tmp;
-	memset(tmp, 0, nbytes);
+	p = option_find(start, (unsigned char *)mess + sz, OPTION_END);
+	if (!p)
+		return 0;
+	end = (unsigned char *)mess + sz + DHCP_HEADROOM;
+	memset(p, 0, end - p);
 
 	/* Option 82 should always be added last */
-	add_option82(mess, end, ifindex, cfg, iface, addr);
+	p = add_option82(p, end, ifindex, cfg, iface, addr);
+	*p++ = OPTION_END;
 
-	return dhcp_packet_size(mess, real_end);
+	sz = p - (unsigned char *)mess;
+
+	return sz < MIN_PACKETSZ ? MIN_PACKETSZ : sz;
 }
 
 static unsigned char *find_option82(struct dhcp_packet_with_opts *mess, size_t sz)
 {
-	return option_find1(&mess->options[0] + sizeof(u32), (unsigned char *)mess + sz, OPTION_AGENT_ID, 0);
+	return option_find(&mess->options[0] + sizeof(u32), (unsigned char *)mess + sz, OPTION_AGENT_ID);
 }
 
 int has_option82(struct dhcp_packet_with_opts *mess, size_t sz)
