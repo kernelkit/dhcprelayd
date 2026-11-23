@@ -155,6 +155,17 @@ Circuit-id in option 82, default the name of the port.
 Circuit-id as bytes, see
 .BR "HEX VALUES" .
 .TP
+.BI tagged " = true" \fR|\fB false
+Set to true for a port that is a tagged member of the VLAN, e.g. a trunk
+port.  Only requests tagged with the VLAN of the interface are then
+relayed, so the port can be listed in more than one
+.B interface
+section, one for each of its VLANs.  The interface must be a VLAN
+interface.  Default false: only untagged requests are relayed, and the
+port can be listed in one
+.B interface
+section.
+.TP
 .BI trusted " = true" \fR|\fB false
 As
 .B trusted

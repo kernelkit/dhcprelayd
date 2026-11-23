@@ -26,6 +26,8 @@ invalid 'server 20.0.0.2 {} option82 { remote-id-type = giaddr remote-id = a } i
 invalid 'server 20.0.0.2 {} interface c1 { port c1 { circuit-id-hex = 0:1 } }'
 invalid 'server 20.0.0.2 {} interface c1 { port c1 { circuit-id-hex = 01: } }'
 invalid 'server 20.0.0.2 {} interface c1 { port nope {} }'
+invalid 'server 20.0.0.2 {} interface c1 { port s1 { tagged = true } }'
+invalid 'server 20.0.0.2 {} interface c1 { port s1 {} } interface s1 { port s1 {} }'
 invalid 'server 20.0.0.2 {} interface nope {}'
 invalid 'server 20.0.0.2 { port = 0 } interface c1 {}'
 invalid 'server 20.0.0.300 {} interface c1 {}'

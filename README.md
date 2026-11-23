@@ -169,6 +169,11 @@ least one is required
     ports, requests are relayed from the interface itself
     * **circuit-id** - circuit-id as text, default the port name
     * **circuit-id-hex** - circuit-id as bytes, see below
+    * **tagged** - `true` for a port that is a tagged member of the
+      VLAN of the interface, e.g. a trunk port.  It can then be a port
+      of several interfaces, one for each VLAN.  The interface must be
+      a VLAN interface.  Default `false`, only untagged requests are
+      relayed
     * **trusted** - as for the interface, for this port only
 
 The `-hex` settings take colon separated pairs of hex digits, e.g.

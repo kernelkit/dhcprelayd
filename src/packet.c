@@ -42,13 +42,14 @@ union {
 	char control[CMSG_SPACE(sizeof(struct in_pktinfo))];
 } control_u;
 
-/* The interface or port with @ifindex and its group, NULL if not found */
-static conf_iface_t *find_iface(conf_t *cfg, int ifindex, conf_group_t **group)
+/* The interface or port with @ifindex, NULL if not found */
+conf_iface_t *find_iface(conf_t *cfg, int ifindex)
 {
+	conf_group_t *group;
 	conf_iface_t *iface;
 
-	TAILQ_FOREACH(*group, &cfg->group_list, link) {
-		TAILQ_FOREACH(iface, &(*group)->iface_list, link) {
+	TAILQ_FOREACH(group, &cfg->group_list, link) {
+		TAILQ_FOREACH(iface, &group->iface_list, link) {
 			if (iface->ifindex == ifindex)
 				return iface;
 		}
@@ -122,11 +123,11 @@ static int valid(struct dhcp_packet *packet, ssize_t sz)
 }
 
 /* @mac is the Ethernet source address, NULL for a request to udp-listen-port, not checked */
-int handle_request(conf_t *cfg, struct dhcp_packet *packet, ssize_t sz, int ifindex, const unsigned char *mac)
+int handle_request(conf_t *cfg, conf_iface_t *iface, struct dhcp_packet *packet, ssize_t sz, const unsigned char *mac)
 {
+	conf_group_t *group = iface->group;
+	int ifindex = iface->ifindex;
 	struct sockaddr_in saddr;
-	conf_group_t *group;
-	conf_iface_t *iface;
 	conf_server_t *server;
 	int direct;
 
@@ -138,11 +139,6 @@ int handle_request(conf_t *cfg, struct dhcp_packet *packet, ssize_t sz, int ifin
 
 	syslog2(LOG_DEBUG, "Received a request");
 
-	iface = find_iface(cfg, ifindex, &group);
-	if (!iface) {
-		syslog2(LOG_ERR, "Received packet on wrong interface (ifindex: %d), discarding it.", ifindex);
-		return 1;
-	}
 	/* From the client itself, not through a relay agent or a router */
 	direct = mac && packet->htype == ARPHRD_ETHER && packet->hlen == ETH_ALEN &&
 		!memcmp(packet->chaddr, mac, ETH_ALEN);

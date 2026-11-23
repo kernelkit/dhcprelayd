@@ -61,7 +61,8 @@ typedef struct client_cache_t {
 	int ifindex;
 } client_cache_t;
 
-int handle_request(conf_t *cfg, struct dhcp_packet *packet, ssize_t sz, int ifindex, const unsigned char *mac);
+conf_iface_t *find_iface(conf_t *cfg, int ifindex);
+int handle_request(conf_t *cfg, conf_iface_t *iface, struct dhcp_packet *packet, ssize_t sz, const unsigned char *mac);
 int handle_reply(conf_t *cfg, struct dhcp_packet *packet, ssize_t sz, struct in_addr src);
 
 #endif

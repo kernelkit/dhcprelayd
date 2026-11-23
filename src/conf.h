@@ -32,9 +32,13 @@ typedef enum option82_rid_type_t {
 
 TAILQ_HEAD(server_list, conf_server_t);
 
+struct conf_group_t;
+
 typedef struct conf_iface_t {
 	TAILQ_ENTRY(conf_iface_t) link;
+	struct conf_group_t *group;
 	int ifindex;
+	int vid;		/* VLAN of tagged requests, 0 for untagged */
 
 	char circuit_id[OPT82_ID_LEN];
 	int circuit_id_len;

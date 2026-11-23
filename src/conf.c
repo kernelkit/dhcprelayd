@@ -23,9 +23,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <arpa/inet.h>
 #include <net/if.h>
 #include <netinet/in.h>
+#include <sys/ioctl.h>
+#include <linux/if_vlan.h>
+#include <linux/sockios.h>
 
 #include "conf.h"
 #include "logging.h"
@@ -76,6 +80,7 @@ static cfg_opt_t option82_opts[] = {
 static cfg_opt_t port_opts[] = {
 	CFG_STR("circuit-id", NULL, CFGF_NONE),
 	CFG_STR("circuit-id-hex", NULL, CFGF_NONE),
+	CFG_BOOL("tagged", cfg_false, CFGF_NONE),
 	CFG_BOOL("trusted", cfg_false, CFGF_NONE),
 	CFG_END()
 };
@@ -312,13 +317,48 @@ static conf_iface_t *add_iface(conf_group_t *group, int ifindex, int trusted)
 		return NULL;
 	}
 	TAILQ_INSERT_TAIL(&group->iface_list, iface, link);
+	iface->group = group;
 	iface->ifindex = ifindex;
 	iface->trusted = trusted;
 
 	return iface;
 }
 
-static int read_ports(cfg_t *cfg, conf_group_t *group)
+/* VLAN ID of VLAN interface @ifname, 0 if it is not one */
+static int vlan_id(const char *ifname)
+{
+	struct vlan_ioctl_args args = { .cmd = GET_VLAN_VID_CMD };
+	int sd, vid = 0;
+
+	sd = socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, 0);
+	if (sd < 0)
+		return 0;
+
+	strncpy(args.device1, ifname, sizeof(args.device1) - 1);
+	if (!ioctl(sd, SIOCGIFVLAN, &args))
+		vid = args.u.VID;
+	close(sd);
+
+	return vid;
+}
+
+/* Requests on @iface would also match another port section */
+static int is_dup(conf_t *conf, conf_iface_t *iface)
+{
+	conf_group_t *group;
+	conf_iface_t *other;
+
+	TAILQ_FOREACH(group, &conf->group_list, link) {
+		TAILQ_FOREACH(other, &group->iface_list, link) {
+			if (other != iface && other->ifindex == iface->ifindex && other->vid == iface->vid)
+				return 1;
+		}
+	}
+
+	return 0;
+}
+
+static int read_ports(cfg_t *cfg, conf_t *conf, conf_group_t *group)
 {
 	int trusted = cfg_getbool(cfg, "trusted");
 	unsigned int i;
@@ -342,6 +382,20 @@ static int read_ports(cfg_t *cfg, conf_group_t *group)
 		if (!iface)
 			return 1;
 		iface->circuit_id_len = read_id(sec, "circuit-id", "circuit-id-hex", iface->circuit_id);
+
+		if (cfg_getbool(sec, "tagged")) {
+			iface->vid = vlan_id(cfg_title(cfg));
+			if (!iface->vid) {
+				syslog2(LOG_ERR, "Port %s is tagged, but %s is not a VLAN interface",
+					cfg_title(sec), cfg_title(cfg));
+				return 1;
+			}
+		}
+		if (is_dup(conf, iface)) {
+			syslog2(LOG_ERR, "Port %s of %s is already a port of another interface",
+				cfg_title(sec), cfg_title(cfg));
+			return 1;
+		}
 	}
 
 	return 0;
@@ -395,7 +449,7 @@ static int read_interface(cfg_t *sec, conf_t *conf, struct ifaddrs *ifap)
 
 	group->option82 = cfg_getbool(sec, "option82");
 
-	if (read_ports(sec, group) || read_servers(sec, &group->server_list))
+	if (read_ports(sec, conf, group) || read_servers(sec, &group->server_list))
 		return 1;
 
 	if (TAILQ_EMPTY(&group->server_list) && TAILQ_EMPTY(&conf->server_list)) {

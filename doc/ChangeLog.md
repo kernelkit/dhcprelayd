@@ -32,6 +32,10 @@ All notable changes to the project are documented in this file.
   relayed by another relay agent, with giaddr set, are now dropped from
   all other interfaces and ports.  They were forwarded with the option
   82 they had, so a client could pick its own circuit-id that way
+- New `port` setting `tagged`, for a trunk port.  Requests tagged with
+  the VLAN of the interface are relayed, so the port can be listed under
+  several interfaces, one for each VLAN.  Tagged requests on a port
+  without the setting are no longer relayed
 - New `interface` setting `option82`, set to false to relay requests
   from an interface without adding option 82
 - The DHCP server can run on the same system as the relay agent, e.g.

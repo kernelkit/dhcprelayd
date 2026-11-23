@@ -106,7 +106,7 @@ static struct dhcp_packet_with_opts *packet_rcv_udp(int sd, unsigned char *buf, 
 	return (struct dhcp_packet_with_opts *)buf;
 }
 
-static struct dhcp_packet_with_opts *packet_rcv_raw(int sd, unsigned char *buf, int sz, int *len, int *ifindex,
+static struct dhcp_packet_with_opts *packet_rcv_raw(int sd, unsigned char *buf, int sz, int *len,
 						    unsigned char **mac)
 {
 	struct sockaddr_ll sl;
@@ -125,12 +125,6 @@ static struct dhcp_packet_with_opts *packet_rcv_raw(int sd, unsigned char *buf, 
 	/* Not interested in outgoing packets. */
 	if (sl.sll_pkttype & PACKET_OUTGOING)
 		return NULL;
-
-	*ifindex = sl.sll_ifindex;
-	if (!*ifindex) {
-		syslog2(LOG_WARNING, "Invalid ifindex for received raw packet (%d).", *ifindex);
-		return NULL;
-	}
 
 	/* The filter only passes IPv4 without options */
 	hlen = sizeof(struct ethhdr) + sizeof(struct iphdr);
@@ -155,18 +149,18 @@ static struct dhcp_packet_with_opts *packet_rcv_raw(int sd, unsigned char *buf, 
 static void packet_cb_raw(struct ev_loop *loop __attribute__ ((unused)), ev_io *w, int revents __attribute__ ((unused)))
 {
 	static unsigned char buf[2048];	/* MAXIMUM_PACKET_SIZE */
+	conf_iface_t *iface = w->data;
 	conf_t *cfg = ev_userdata(loop);
 	struct dhcp_packet_with_opts *packet;
 	unsigned char *mac;
-	int ifindex;
 	int len;
 
 	ev_io_stop(loop, w);
 
 	/* Replies are read from the UDP socket */
-	packet = packet_rcv_raw(w->fd, buf, sizeof(buf) - DHCP_HEADROOM, &len, &ifindex, &mac);
+	packet = packet_rcv_raw(w->fd, buf, sizeof(buf) - DHCP_HEADROOM, &len, &mac);
 	if (packet && packet->header.op == BOOTREQUEST)
-		handle_request(cfg, &packet->header, len, ifindex, mac);
+		handle_request(cfg, iface, &packet->header, len, mac);
 
 	ev_io_start(loop, w);
 }
@@ -176,6 +170,7 @@ static void udp_recv(struct ev_loop *loop, ev_io *w, int replies_only)
 	static unsigned char buf[2048];	/* MAXIMUM_PACKET_SIZE */
 	conf_t *cfg = ev_userdata(loop);
 	struct dhcp_packet_with_opts *packet;
+	conf_iface_t *iface;
 	struct in_addr src;
 	int ifindex;
 	int len;
@@ -185,8 +180,13 @@ static void udp_recv(struct ev_loop *loop, ev_io *w, int replies_only)
 	packet = packet_rcv_udp(w->fd, buf, sizeof(buf) - DHCP_HEADROOM, &len, &ifindex, &src);
 	if (packet && packet->header.op == BOOTREPLY)
 		handle_reply(cfg, &packet->header, len, src);
-	else if (packet && packet->header.op == BOOTREQUEST && !replies_only)
-		handle_request(cfg, &packet->header, len, ifindex, NULL);
+	else if (packet && packet->header.op == BOOTREQUEST && !replies_only) {
+		iface = find_iface(cfg, ifindex);
+		if (iface)
+			handle_request(cfg, iface, &packet->header, len, NULL);
+		else
+			syslog2(LOG_ERR, "Received packet on wrong interface (ifindex: %d), discarding it.", ifindex);
+	}
 	ev_io_start(loop, w);
 }
 
@@ -201,12 +201,21 @@ static void packet_cb_upstream(struct ev_loop *loop, ev_io *w, int revents __att
 	udp_recv(loop, w, 1);
 }
 
-/* UDP to port 67 in an IPv4 packet without options, that is not a fragment */
-static int add_filter(int sd)
+/*
+ * UDP to port 67 in an IPv4 packet without options, that is not a
+ * fragment, tagged with VLAN @vid, 0 for untagged or priority tagged.
+ */
+static int add_filter(int sd, int vid)
 {
 	struct sock_fprog fprog;
 
-	static struct sock_filter filter[] = {
+	struct sock_filter filter[] = {
+		BPF_STMT(BPF_LD | BPF_W | BPF_ABS, SKF_AD_OFF + SKF_AD_VLAN_TAG),
+		BPF_STMT(BPF_ALU | BPF_AND | BPF_K, 0xfff),
+		BPF_STMT(BPF_MISC | BPF_TAX, 0),
+		BPF_STMT(BPF_LD | BPF_W | BPF_ABS, SKF_AD_OFF + SKF_AD_VLAN_TAG_PRESENT),
+		BPF_STMT(BPF_ALU | BPF_MUL | BPF_X, 0),
+		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, vid, 0, 11),
 		BPF_STMT(BPF_LD | BPF_H | BPF_ABS, 12),
 		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, ETH_P_IP, 0, 9),
 		BPF_STMT(BPF_LD | BPF_B | BPF_ABS, 14),
@@ -258,9 +267,10 @@ static int setup_sockets_raw(struct ev_loop *loop, conf_t *cfg)
 				syslog2(LOG_ERR, "Failed creating raw socket: %m");
 				return 1;
 			}
-			if (add_filter(iface->sd) || bind_to_interface(iface->sd, iface->ifindex))
+			if (add_filter(iface->sd, iface->vid) || bind_to_interface(iface->sd, iface->ifindex))
 				return 1;
 			ev_io_init(&iface->io, packet_cb_raw, iface->sd, EV_READ);
+			iface->io.data = iface;
 			ev_io_start(loop, &iface->io);
 		}
 	}
