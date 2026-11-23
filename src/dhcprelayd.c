@@ -107,10 +107,11 @@ static struct dhcp_packet_with_opts *packet_rcv_udp(int sd, unsigned char *buf, 
 }
 
 static struct dhcp_packet_with_opts *packet_rcv_raw(int sd, unsigned char *buf, int sz, int *len,
-						    unsigned char **mac)
+						    unsigned char **mac, in_addr_t giaddr)
 {
 	struct sockaddr_ll sl;
 	struct ethhdr *eth_hdr = (struct ethhdr *)buf;
+	struct iphdr *ip = (struct iphdr *)(eth_hdr + 1);
 	struct udphdr *udp;
 	int hlen, ulen;
 
@@ -132,6 +133,10 @@ static struct dhcp_packet_with_opts *packet_rcv_raw(int sd, unsigned char *buf, 
 		syslog2(LOG_DEBUG, "Received truncated raw packet (%d bytes).", *len);
 		return NULL;
 	}
+
+	/* Unicast to a server or another relay agent, left to the bridge */
+	if (!(eth_hdr->h_dest[0] & 1) && ip->daddr != giaddr)
+		return NULL;
 
 	udp = (struct udphdr *)(buf + hlen);
 
@@ -158,7 +163,7 @@ static void packet_cb_raw(struct ev_loop *loop __attribute__ ((unused)), ev_io *
 	ev_io_stop(loop, w);
 
 	/* Replies are read from the UDP socket */
-	packet = packet_rcv_raw(w->fd, buf, sizeof(buf) - DHCP_HEADROOM, &len, &mac);
+	packet = packet_rcv_raw(w->fd, buf, sizeof(buf) - DHCP_HEADROOM, &len, &mac, iface->group->giaddr);
 	if (packet && packet->header.op == BOOTREQUEST)
 		handle_request(cfg, iface, &packet->header, len, mac);
 

@@ -47,6 +47,9 @@ All notable changes to the project are documented in this file.
 - Replies from a server behind a bridge port that is relayed from were
   dropped, so clients got no address with the server on the same subnet
   behind such a port, e.g. in a chain of relay agents
+- A request sent directly to a server through the bridge, a renewal or
+  one from another relay agent, was also relayed, so the server got it
+  twice
 - Requests on a routed interface were relayed twice, so the server got
   every DHCPDISCOVER and DHCPREQUEST two times
 - Requests were relayed with 42 bytes of trailing garbage after the DHCP
