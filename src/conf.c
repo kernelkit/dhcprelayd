@@ -82,6 +82,7 @@ static cfg_opt_t port_opts[] = {
 
 static cfg_opt_t interface_opts[] = {
 	CFG_STR("giaddr", "auto", CFGF_NONE),
+	CFG_BOOL("option82", cfg_true, CFGF_NONE),
 	CFG_BOOL("trusted", cfg_false, CFGF_NONE),
 	CFG_SEC("server", server_opts, CFGF_MULTI | CFGF_TITLE | CFGF_NO_TITLE_DUPES),
 	CFG_SEC("port", port_opts, CFGF_MULTI | CFGF_TITLE | CFGF_NO_TITLE_DUPES),
@@ -391,6 +392,8 @@ static int read_interface(cfg_t *sec, conf_t *conf, struct ifaddrs *ifap)
 		syslog2(LOG_ERR, "No IPv4 address on %s to use as giaddr", ifname);
 		return 1;
 	}
+
+	group->option82 = cfg_getbool(sec, "option82");
 
 	if (read_ports(sec, group) || read_servers(sec, &group->server_list))
 		return 1;

@@ -170,7 +170,7 @@ int handle_request(conf_t *cfg, struct dhcp_packet *packet, ssize_t sz, int ifin
 		 * without changing giaddr or adding option82.*/
 	} else {
 		struct dhcp_packet_with_opts *mess = (struct dhcp_packet_with_opts *)packet;
-		int add = cfg->opt82.enabled;
+		int add = cfg->opt82.enabled && group->option82;
 		struct in_addr addr;
 
 		/* Replace is done by add_options() */

@@ -155,6 +155,8 @@ least one is required
   * **giaddr** - gateway address, sent to the server and used by the
     server to select the subnet.  An IPv4 address, or `auto`, default,
     for the first IPv4 address of the interface
+  * **option82** - `false` to relay from this interface without adding
+    option 82; option 82 in a request is kept.  Default `true`
   * **server ADDRESS { }** - servers for this interface, replace the
     global ones
   * **trusted** - `true` where another relay agent, or a switch that

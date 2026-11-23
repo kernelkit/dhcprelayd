@@ -114,6 +114,14 @@ subnet.  An IPv4 address, or
 .BR auto ,
 the default, for the first IPv4 address of the interface.
 .TP
+.BI option82 " = true" \fR|\fB false
+Set to false to relay requests from this interface without adding option
+82.  Option 82 in a request is then kept, whatever the
+.BR policy .
+Default true.  Has no effect without the
+.B option82
+section.
+.TP
 .BI server " address " { " ... " }
 Servers for this interface, same syntax as the global
 .BR server .
